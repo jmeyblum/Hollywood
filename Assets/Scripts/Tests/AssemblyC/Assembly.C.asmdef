@@ -1,0 +1,15 @@
+{
+    "name": "Assembly.C",
+    "references": [
+        "GUID:b57acc56a55ae9a4e8d80094efdcc695"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
