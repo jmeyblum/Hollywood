@@ -1,249 +1,271 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using System.Collections.Generic;
 using Mono.Cecil;
-using UnityEditor;
 using UnityEditor.Compilation;
 using System;
 using System.Linq;
-using UnityEngine.Assertions;
 using Hollywood.Runtime;
 using Mono.Cecil.Cil;
+using Hollywood.Runtime.Internal;
 
 namespace Hollywood.Editor
 {
-    // TODO: List type that will be IInjectable;
-    // TODO: List type that will be owners
-    // TODO: List all injected interfaces
-    // TODO: Generate __InjectedInterfaces.
-    // TODO: For all owners modify constructor to add Hollywood.Runtime.Injector.CreateOwnedInstance<TOwnedType>(this);, add IOwner interface, implement it;
-    // TODO: For all injectables add IInjectable, implement virtual __ResolveDependencies like so:
-    //  - for each needs field : _field = Hollywood.Runtime.Injector.ResolveDependency<IFieldType>();
-    //  - after all fields if it is an owner : Hollywood.Runtime.Injector.ResolveOwnedInstances(this);
-    // TODO: support IOwner type when base types are IOwner (IOwner implementation must only exists in highest class, this will likely fuck-up if said base class is in another assembly, or maybe not since if base class is in another assembly it has already been compiled.)
-    // TODO: support IInjectable type when base types are IInjectable: __ResolveDependencies must be marked as override instead of virtual and not call Hollywood.Runtime.Injector.ResolveOwnedInstances(this); but base.__ResolveDependencies().
-
-    public static class AssemblyInjector
-    {
-        private static readonly Type OwnsAttributeType = typeof(OwnsAttribute);
-        private static readonly Type OwnsAllAttributeType = typeof(OwnsAllAttribute);
-        private static readonly Type NeedsAttributeType = typeof(NeedsAttribute);
-
-        [InitializeOnLoadMethod]
-        public static void OnInitializeOnLoad()
-        {
-            CompilationPipeline.assemblyCompilationFinished -= OnCompilationFinished;
-            CompilationPipeline.assemblyCompilationFinished += OnCompilationFinished;
-        }
-
-        private class InjectionType
-        {
-            public HashSet<string> ownedInterfaceType = new HashSet<string>();
-            public HashSet<string> ownedAllInterfaceType = new HashSet<string>();
-            public HashSet<string> neededInterfaceType = new HashSet<string>();
-        }
-
-        private class InjectionInterface
-        {
-
-        }
-
-        private static void OnCompilationFinished(string assemblyPath, CompilerMessage[] compilerMessages)
-        {
-            Debug.Log(assemblyPath);
-
-            if (compilerMessages.Any(msg => msg.type == CompilerMessageType.Error) == true)
-            {
-                return;
-            }
-
-            if (assemblyPath.Contains("Unity"))
-            {
-                return;
-            }
-
-            if (!assemblyPath.Contains("Assembly.C"))
-            {
-                return;
-            }
-
-            var assemblyDefinition = AssemblyDefinition.ReadAssembly(assemblyPath, new ReaderParameters(ReadingMode.Immediate) { ReadSymbols = true, ReadWrite = true, AssemblyResolver = new DefaultAssemblyResolver() });
-
-            var moduleDefinition = assemblyDefinition.MainModule;
-
-            var injectedTypes = new Dictionary<TypeDefinition, InjectionType>();
-            var interfaces = new HashSet<string>();
-
-            foreach (var typeDefinition in moduleDefinition.Types)
-            {
-                InjectionType injectedType = null;
-
-                var ownsAttributes = typeDefinition.CustomAttributes.Where(attribute => attribute.AttributeType.FullName == OwnsAttributeType.FullName);
-                if (ownsAttributes.Any())
-                {
-                    injectedType = injectedType ?? new InjectionType();
-
-                    foreach (var ownsAttribute in ownsAttributes)
-                    {
-                        var ownedType = ownsAttribute.ConstructorArguments.First().Value as TypeReference;
-
-                        string name = ownedType.FullName;
-                        injectedType.ownedInterfaceType.Add(name);
-                        interfaces.Add(name);
-                    }
-                }
-
-                var ownsAllAttributes = typeDefinition.CustomAttributes.Where(attribute => attribute.AttributeType.FullName == OwnsAllAttributeType.FullName);
-                if (ownsAllAttributes.Any())
-                {
-                    injectedType = injectedType ?? new InjectionType();
-
-                    foreach (var ownsAllAttribute in ownsAllAttributes)
-                    {
-                        var ownedAllType = ownsAllAttribute.ConstructorArguments.First().Value as TypeReference;
-
-                        string name = ownedAllType.FullName;
-                        injectedType.ownedAllInterfaceType.Add(name);
-                        interfaces.Add(name);
-                    }
-                }
-
-                var neededFields = typeDefinition.Fields.Where(f => f.CustomAttributes.Any(a => a.AttributeType.FullName == NeedsAttributeType.FullName));
-                if (neededFields.Any())
-                {
-                    injectedType = injectedType ?? new InjectionType();
-
-                    foreach (var neededField in neededFields)
-                    {
-                        var interfaceType = neededField.FieldType;
-
-                        interfaces.Add(interfaceType.FullName);
-                    }
-                }
-
-                if (injectedType != null)
-                {
-                    injectedTypes[typeDefinition] = injectedType;
-                }
-            }
+	// TODO: List type that will be IInjectable;
+	// TODO: List type that will be owners
+	// TODO: List all injected interfaces
+	// TODO: Generate __InjectedInterfaces.
+	// TODO: For all owners modify constructor to add Hollywood.Runtime.Injector.CreateOwnedInstance<TOwnedType>(this);, add IOwner interface, implement it;
+	// TODO: For all injectables add IInjectable, implement virtual __ResolveDependencies like so:
+	//  - for each needs field : _field = Hollywood.Runtime.Injector.ResolveDependency<IFieldType>();
+	//  - after all fields if it is an owner : Hollywood.Runtime.Injector.ResolveOwnedInstances(this);
+	// TODO: support IOwner type when base types are IOwner (IOwner implementation must only exists in highest class, this will likely fuck-up if said base class is in another assembly, or maybe not since if base class is in another assembly it has already been compiled.)
+	// TODO: support IInjectable type when base types are IInjectable: __ResolveDependencies must be marked as override instead of virtual and not call Hollywood.Runtime.Injector.ResolveOwnedInstances(this); but base.__ResolveDependencies().
+	// add settings to have a list of ignored assemblies
 
 
-            var warmupTypeDef = new TypeDefinition($"__Hollywood.{assemblyDefinition.MainModule.Name}", "__WarmUpInjectedInterfaces", TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit);
-            warmupTypeDef.BaseType = moduleDefinition.ImportReference(typeof(System.Object));
+	internal class AssemblyInjector
+	{
 
-            var interfacesMember = new FieldDefinition("__interfaces", FieldAttributes.Public | FieldAttributes.Static, moduleDefinition.ImportReference(typeof(string[])));
+		internal static readonly Type OwnsAttributeType = typeof(OwnsAttribute);
+		internal static readonly Type OwnsAllAttributeType = typeof(OwnsAllAttribute);
+		internal static readonly Type NeedsAttributeType = typeof(NeedsAttribute);
 
-            var warmupConstructor = new MethodDefinition(".cctor", MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.Static | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName, moduleDefinition.ImportReference(typeof(void)));
+		internal static readonly Type IInjectableType = typeof(IInjectable);
+		internal static readonly Type IOwnerType = typeof(IOwner);
 
-            CreateStringArray(moduleDefinition, interfacesMember, warmupConstructor);
+		private AssemblyDefinition AssemblyDefinition;
 
-            warmupTypeDef.Methods.Add(warmupConstructor);
-            warmupTypeDef.Fields.Add(interfacesMember);
+		private InjectionResult Result;
 
-            moduleDefinition.Types.Add(warmupTypeDef);
+		private AssemblyInjector(AssemblyDefinition assemblyDefinition)
+		{
+			AssemblyDefinition = assemblyDefinition;
 
-            /*
-            //             var moduleType = moduleDefinition.Types.FirstOrDefault(t => t.Name == "<Module>");
-            // 
-            //             if(moduleType != null)
-            //             {
-            //                 var method = moduleType.Methods.FirstOrDefault(m => m.IsStatic && m.Name == ".cctor");
-            // 
-            //                 if (method == null)
-            //                 {
-            //                     var attributes = MethodAttributes.Private
-            //                                      | MethodAttributes.HideBySig
-            //                                      | MethodAttributes.Static
-            //                                      | MethodAttributes.SpecialName
-            //                                      | MethodAttributes.RTSpecialName;
-            //                     method = new MethodDefinition(".cctor", attributes, moduleDefinition.ImportReference(typeof(void)));
-            //                     moduleType.Methods.Add(method);
-            //                     method.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
-            //                 }
-            // 
-            //                 var body = method.Body;
-            // 
-            //                 var logref = moduleDefinition.ImportReference(typeof(TestLog).GetMethod("Log", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public));
-            // 
-            //                 if (logref != null)
-            //                 {
-            //                     List<Instruction> instructions = new List<Instruction>();
-            //                     instructions.Add(Instruction.Create(OpCodes.Call, logref));
-            //                     instructions.Add(Instruction.Create(OpCodes.Ret));
-            // 
-            //                     body.Instructions.Clear();
-            //                     foreach (var ins in instructions)
-            //                     {
-            //                         body.Instructions.Add(ins);
-            //                     }
-            //                 }                
-            //             }
-            */
+			Inject();
+		}
 
-            assemblyDefinition.Write(new WriterParameters { WriteSymbols = true });
+		private void Inject()
+		{
+			var injectionData = new InjectionData(AssemblyDefinition.MainModule);
 
-            //
-            // loop through types to fetch
+			Inject(injectionData);
+		}
 
-            assemblyDefinition.Dispose();
-        }
+		private void Inject(InjectionData injectionData)
+		{
+			Inject(injectionData.InjectableTypes);
 
-        private static void CreateStringArray(ModuleDefinition moduleDefinition, FieldDefinition interfacesMember, MethodDefinition warmupConstructor)
-        {
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_I4, 12));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Newarr, moduleDefinition.ImportReference(typeof(string))));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Dup));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_I4_0));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldstr, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Stelem_Ref));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Dup));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_I4_1));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldstr, "BBBBBB"));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Stelem_Ref));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Dup));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_I4_2));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldstr, "CCCCC"));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Stelem_Ref));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Dup));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_I4_3));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldstr, "DDDDD"));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Stelem_Ref));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Dup));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_I4_4));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldstr, "EEEEEE"));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Stelem_Ref));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Dup));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_I4_5));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldstr, "FFFFFF"));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Stelem_Ref));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Dup));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_I4_6));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldstr, "GGGGGG"));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Stelem_Ref));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Dup));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_I4_7));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldstr, "HHHHHH"));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Stelem_Ref));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Dup));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_I4_8));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldstr, "IIIIII"));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Stelem_Ref));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Dup));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_I4_S, (sbyte)9));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldstr, "JJJJJJ"));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Stelem_Ref));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Dup));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_I4_S, (sbyte)10));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldstr, "KKKKKK"));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Stelem_Ref));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Dup));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_I4_S, (sbyte)11));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldstr, "LLLLLLL"));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Stelem_Ref));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Stsfld, interfacesMember));
-            warmupConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
-        }
-    }
+			Inject(injectionData.InjectedInterfaces);
+		}
+
+		private void Inject(IEnumerable<InjectableType> injectableTypes)
+		{
+			if (injectableTypes.Count() == 0)
+			{
+				return;
+			}
+
+			Result = InjectionResult.Modified;
+
+			foreach (var injectableType in injectableTypes)
+			{
+				Inject(injectableType);
+			}
+		}
+
+		private void Inject(InjectableType injectableType)
+		{
+			Result = InjectionResult.Modified;
+
+			// add IOwner if owner
+			bool isOwner = injectableType.ownedInterfaceType.Count > 0;
+
+			InterfaceImplementation iownerType = new InterfaceImplementation(AssemblyDefinition.MainModule.ImportReference(IOwnerType));
+			injectableType.Type.Interfaces.Add(iownerType);
+
+			var objectHashsetType = AssemblyDefinition.MainModule.ImportReference(typeof(HashSet<object>));
+			string backingFieldName = $"<{IOwnerType.FullName}.{nameof(IOwner.__ownedInstances)}>k__BackingField";
+			var backingField = new FieldDefinition(backingFieldName, FieldAttributes.Private, objectHashsetType);
+
+			injectableType.Type.Fields.Add(backingField);
+
+			string getOwnedInstancesInterfaceMethodName = $"get_{nameof(IOwner.__ownedInstances)}";
+			var ownerInterfaceGetOwnedInstancesMethod = AssemblyDefinition.MainModule.ImportReference(IOwnerType.GetMethod(getOwnedInstancesInterfaceMethodName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic));
+
+			var getOwnedInstancesMethodName = $"{ownerInterfaceGetOwnedInstancesMethod.DeclaringType}.{ownerInterfaceGetOwnedInstancesMethod.Name}";
+
+			var ownedInstanceGetterMethod = new MethodDefinition(getOwnedInstancesMethodName,
+				MethodAttributes.Private |
+				MethodAttributes.Final |
+				MethodAttributes.HideBySig |
+				MethodAttributes.Virtual |
+				MethodAttributes.NewSlot |
+				MethodAttributes.SpecialName, objectHashsetType);
+
+			ownedInstanceGetterMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
+			ownedInstanceGetterMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldfld, backingField));
+			ownedInstanceGetterMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
+
+			ownedInstanceGetterMethod.Overrides.Add(ownerInterfaceGetOwnedInstancesMethod);
+
+			injectableType.Type.Methods.Add(ownedInstanceGetterMethod);
+
+			string setOwnedInstancesMethodName = $"set_{nameof(IOwner.__ownedInstances)}";
+			var ownerInterfaceSetOwnedInstancesMethod = AssemblyDefinition.MainModule.ImportReference(IOwnerType.GetMethod(setOwnedInstancesMethodName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic));
+
+			var SetOwnedInstancesMethodName = $"{ownerInterfaceSetOwnedInstancesMethod.DeclaringType}.{ownerInterfaceSetOwnedInstancesMethod.Name}";
+
+			var ownedInstancesSetterMethod = new MethodDefinition(setOwnedInstancesMethodName,
+				MethodAttributes.Public |
+				MethodAttributes.Final |
+				MethodAttributes.HideBySig |
+				MethodAttributes.Virtual |
+				MethodAttributes.NewSlot |
+				MethodAttributes.SpecialName, AssemblyDefinition.MainModule.ImportReference(typeof(void)));
+
+			ownedInstancesSetterMethod.Parameters.Add(new ParameterDefinition("value", ParameterAttributes.None, objectHashsetType));
+
+			ownedInstancesSetterMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
+			ownedInstancesSetterMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_1));
+			ownedInstancesSetterMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Stfld, backingField));
+			ownedInstancesSetterMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Nop));
+			ownedInstancesSetterMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
+
+			ownedInstancesSetterMethod.Overrides.Add(ownerInterfaceSetOwnedInstancesMethod);
+
+			injectableType.Type.Methods.Add(ownedInstancesSetterMethod);
+
+			var ownedInstancesProperty = new PropertyDefinition($"{IOwnerType.FullName}.{nameof(IOwner.__ownedInstances)}", PropertyAttributes.None, objectHashsetType);
+			ownedInstancesProperty.GetMethod = ownedInstanceGetterMethod;
+			ownedInstancesProperty.SetMethod = ownedInstancesSetterMethod;
+
+			injectableType.Type.Properties.Add(ownedInstancesProperty);
+
+			// add IInjectable
+			InterfaceImplementation iinjectableType = new InterfaceImplementation(AssemblyDefinition.MainModule.ImportReference(IInjectableType));
+			injectableType.Type.Interfaces.Add(iinjectableType);
+
+			var resolveDependenciesInterfaceMethod = AssemblyDefinition.MainModule.ImportReference(typeof(IInjectable).GetMethod(nameof(IInjectable.__ResolveDependencies), System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic));
+			MethodDefinition resolveDependenciesMethod = new MethodDefinition($"{resolveDependenciesInterfaceMethod.DeclaringType}.{resolveDependenciesInterfaceMethod.Name}", 
+				MethodAttributes.Private | 
+				MethodAttributes.Final | 
+				MethodAttributes.HideBySig | 
+				MethodAttributes.Virtual | 
+				MethodAttributes.NewSlot, 
+				AssemblyDefinition.MainModule.ImportReference(typeof(void)));
+
+			resolveDependenciesMethod.Overrides.Add(resolveDependenciesInterfaceMethod);
+
+			resolveDependenciesMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Nop));
+
+			foreach(var neededField in injectableType.neededInterfaceType)
+			{
+				resolveDependenciesMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
+
+				var resolveDependencyMethod = typeof(Injector).GetMethod(nameof(Injector.ResolveDependency), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);			
+
+				var resolveDependencyGenericMethodReference = AssemblyDefinition.MainModule.ImportReference(resolveDependencyMethod);
+
+				var resolveDependencyMethodReference = new GenericInstanceMethod(resolveDependencyGenericMethodReference);
+				resolveDependencyMethodReference.GenericArguments.Add(neededField.Value);
+
+				resolveDependenciesMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Call, resolveDependencyMethodReference));
+				resolveDependenciesMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Stfld, neededField.Key));
+			}
+
+			resolveDependenciesMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
+
+			injectableType.Type.Methods.Add(resolveDependenciesMethod);
+
+			// add IDisposable if not here
+			// implements constructor
+			// implements __ResolveDependencies
+			// implements Dispose
+		}
+
+		private void Inject(IEnumerable<InjectedInterface> injectedInterfaces)
+		{
+			if(injectedInterfaces.Count() == 0)
+			{
+				return;
+			}
+
+			Result = InjectionResult.Modified;
+
+			var injectedInterfacesType = new TypeDefinition($"__Hollywood.{AssemblyDefinition.MainModule.Name}", "__InjectedInterfaces", TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit);
+			injectedInterfacesType.BaseType = AssemblyDefinition.MainModule.ImportReference(typeof(System.Object));
+			var injectedInterfacesConstructor = new MethodDefinition(".cctor", MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.Static | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName, AssemblyDefinition.MainModule.ImportReference(typeof(void)));
+			var interfaceNamesMember = new FieldDefinition("__interfaceNames", FieldAttributes.Public | FieldAttributes.Static, AssemblyDefinition.MainModule.ImportReference(typeof(string[])));
+			injectedInterfacesType.Methods.Add(injectedInterfacesConstructor);
+			injectedInterfacesType.Fields.Add(interfaceNamesMember);
+
+			AssemblyDefinition.MainModule.Types.Add(injectedInterfacesType);
+
+			injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_I4, injectedInterfaces.Count()));
+			injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Newarr, AssemblyDefinition.MainModule.ImportReference(typeof(string))));
+			int injectedInterfaceIndex = 0;
+			foreach(var injectedInterface in injectedInterfaces)
+			{
+				injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Dup));
+
+				if (injectedInterfaceIndex <= 8)
+				{
+					OpCode code = default;
+					switch (injectedInterfaceIndex)
+					{
+						case 0:
+							code = OpCodes.Ldc_I4_0;
+							break;
+						case 1:
+							code = OpCodes.Ldc_I4_1;
+							break;
+						case 2:
+							code = OpCodes.Ldc_I4_2;
+							break;
+						case 3:
+							code = OpCodes.Ldc_I4_3;
+							break;
+						case 4:
+							code = OpCodes.Ldc_I4_4;
+							break;
+						case 5:
+							code = OpCodes.Ldc_I4_5;
+							break;
+						case 6:
+							code = OpCodes.Ldc_I4_6;
+							break;
+						case 7:
+							code = OpCodes.Ldc_I4_7;
+							break;
+						case 8:
+							code = OpCodes.Ldc_I4_8;
+							break;
+					}
+					injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(code));
+				}
+				else if(injectedInterfaceIndex < 128)
+				{
+					injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_I4_S, (sbyte)injectedInterfaceIndex));
+				}
+				else
+				{
+					injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_I4, injectedInterfaceIndex));
+				}
+
+				injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldstr, injectedInterface.ToString()));
+				injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Stelem_Ref));
+
+				++injectedInterfaceIndex;
+			}
+
+			injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Stsfld, interfaceNamesMember));
+			injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
+		}
+
+		internal static InjectionResult Inject(AssemblyDefinition assemblyDefinition)
+		{
+			return new AssemblyInjector(assemblyDefinition).Result;
+		}
+	}
 }
 
 /*

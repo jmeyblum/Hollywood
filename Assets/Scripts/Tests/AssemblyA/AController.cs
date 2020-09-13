@@ -4,7 +4,7 @@ using Hollywood.Runtime.Internal;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEngine;
-
+/*
 [Owns(typeof(IBInterface2))]
 public class AController : MonoBehaviour
 {
@@ -2588,5 +2588,28 @@ namespace __Hollywood.__Assembly.A
 "SomeInterface2524",
 "SomeInterface",
         };
+    }
+}
+
+*/
+
+[Owns(typeof(IBInterface2))]
+public class TestController
+{
+    [Needs]
+    IBInterface _myB;
+}
+
+public class TestControllerManual : IInjectable, IOwner
+{
+	IBInterface _myB;
+
+	HashSet<object> IOwner.__ownedInstances { get; set; }
+
+    void IInjectable.__ResolveDependencies()
+	{
+        _myB = Hollywood.Runtime.Injector.ResolveDependency<IBInterface>();
+
+        Hollywood.Runtime.Injector.ResolveOwnedInstances(this);
     }
 }
