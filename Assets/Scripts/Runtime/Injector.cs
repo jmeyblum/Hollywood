@@ -6,6 +6,8 @@ using UnityEngine.Assertions;
 
 namespace Hollywood.Runtime
 {
+    // TODO: Refactor IInjectable to set an owner, also add the onwed instance to the caller __ownedInstances. Doing so we should be able to get rid of the Owners stack, ResolveDependency<T>() should take the caller as a parameter and go up the owner chain (skiping the caller). ResolveOwnedInstances(IOwner owner) shouldn't have the push pop of owner. 
+
     // TODO: Add callbacks for post dependency resolution (using interfaces) and also when disposing
     // TODO: Implement OwnsAll
     // TODO: Add attribute to ignore specific class from being resolved (non-abstract class implementing interface but only meant to be used by derived types)
@@ -24,7 +26,7 @@ namespace Hollywood.Runtime
         }
 
         private static IContext Context;
-        private static Stack<object> Owners;
+        private static Stack<object> Owners = new Stack<object>();
 
         public static T ResolveDependency<T>()
         {
@@ -34,9 +36,9 @@ namespace Hollywood.Runtime
                 {
                     return (T)owner;
                 }
-                if (owner is IOwner iowner && iowner.__ownedInstances != null)
+                if (owner is IOwner iOwner && iOwner.__ownedInstances != null)
                 {
-                    foreach (var instance in iowner.__ownedInstances)
+                    foreach (var instance in iOwner.__ownedInstances)
                     {
                         if (typeof(T).IsAssignableFrom(instance.GetType()))
                         {
@@ -51,36 +53,64 @@ namespace Hollywood.Runtime
             return default;
         }
 
-        public static void CreateOwnedInstance<T>(IOwner owner, IContext context = default)
-        {
-            if (owner.__ownedInstances != null)
+        public static T Instantiate<T>(IContext context = default, object owner = null) where T : class
+		{
+            var previousContext = Context;
+            Context = context;
+
+            T instance = default;
+            try
             {
-                foreach (var obj in owner.__ownedInstances)
+                instance = (T)Activator.CreateInstance(typeof(T), true);
+
+                if (instance is IInjectable iInjectable)
                 {
-                    if (typeof(T).IsAssignableFrom(obj.GetType()))
-                    {
-                        return;
-                    }
+                    iInjectable.__ResolveDependencies();
                 }
             }
-            else
+            finally
 			{
-                owner.__ownedInstances = new HashSet<object>();
+                Context = previousContext;
+            }
+
+            return instance;
+		}
+
+        public static void CreateOwnedInstance<T>(IOwner owner, IContext context = default)
+		{
+			if (owner.__ownedInstances != null)
+			{
+				foreach (var obj in owner.__ownedInstances)
+				{
+					if (typeof(T).IsAssignableFrom(obj.GetType()))
+					{
+						return;
+					}
+				}
+			}
+			else
+			{
+				owner.__ownedInstances = new HashSet<object>();
 			}
 
-            context = context ?? Context;
+			T instance = CreateInstance<T>(context);
 
-            var instanceType = context.Get<T>();
+			owner.__ownedInstances.Add(instance);
+		}
 
-            Assert.IsNotNull(instanceType);
-            // TODO: assert instance type is valid for T.
+		private static T CreateInstance<T>(IContext context = default)
+		{
+			context = context ?? Context;
 
-            var instance = Activator.CreateInstance(instanceType);
+			var instanceType = context.Get<T>();
 
-            owner.__ownedInstances.Add(instance);
-        }
+			Assert.IsNotNull(instanceType);
+			// TODO: assert instance type is valid for T.
 
-        public static void ResolveOwnedInstances(IOwner owner)
+			return (T)Activator.CreateInstance(instanceType, true);
+		}
+
+		public static void ResolveOwnedInstances(IOwner owner)
         {
             Owners.Push(owner);
 

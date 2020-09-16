@@ -5,7 +5,9 @@ using UnityEngine.Assertions;
 
 namespace Hollywood.Runtime
 {
-	internal class ReflectionContext : IContext
+	// TODO: add settings to have a list of ignored assemblies
+
+	public class ReflectionContext : IContext
 	{
 		private Dictionary<Type, HashSet<Type>> InterfaceToTypes = new Dictionary<Type, HashSet<Type>>();
 

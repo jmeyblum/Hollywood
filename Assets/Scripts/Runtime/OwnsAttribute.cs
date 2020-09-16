@@ -2,7 +2,7 @@
 
 namespace Hollywood.Runtime
 {
-    [AttributeUsage(AttributeTargets.Class)]
+    [AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
     public class OwnsAttribute : Attribute
     {
         private Type _interfaceType;

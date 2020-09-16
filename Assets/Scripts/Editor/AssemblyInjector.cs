@@ -8,17 +8,9 @@ using Hollywood.Runtime.Internal;
 
 namespace Hollywood.Editor
 {
-	// TODO: List type that will be IInjectable;
-	// TODO: List type that will be owners
-	// TODO: List all injected interfaces
-	// TODO: Generate __InjectedInterfaces.
-	// TODO: For all owners modify constructor to add Hollywood.Runtime.Injector.CreateOwnedInstance<TOwnedType>(this);, add IOwner interface, implement it;
-	// TODO: For all injectables add IInjectable, implement virtual __ResolveDependencies like so:
-	//  - for each needs field : _field = Hollywood.Runtime.Injector.ResolveDependency<IFieldType>();
-	//  - after all fields if it is an owner : Hollywood.Runtime.Injector.ResolveOwnedInstances(this);
 	// TODO: support IOwner type when base types are IOwner (IOwner implementation must only exists in highest class, this will likely fuck-up if said base class is in another assembly, or maybe not since if base class is in another assembly it has already been compiled.)
 	// TODO: support IInjectable type when base types are IInjectable: __ResolveDependencies must be marked as override instead of virtual and not call Hollywood.Runtime.Injector.ResolveOwnedInstances(this); but base.__ResolveDependencies().
-	// add settings to have a list of ignored assemblies
+	// TODO: add settings to have a list of ignored assemblies
 
 
 	// TODO: validate that IInjectable and IOwner is not used by user
