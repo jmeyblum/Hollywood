@@ -17,6 +17,12 @@ namespace Hollywood.Runtime
 
     public static class Injector
     {
+        [UnityEditor.MenuItem("Jean/context")]
+        public static void DoLoad()
+        {
+            var t = new ReflectionContext();
+        }
+
         private static IContext Context;
         private static Stack<object> Owners;
 

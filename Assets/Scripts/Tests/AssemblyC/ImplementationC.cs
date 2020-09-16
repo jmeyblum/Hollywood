@@ -8,10 +8,10 @@ namespace CSpace
 {
     public class ImplementationC : IBInterface2
     {
-        [RuntimeInitializeOnLoadMethod]
+       // [UnityEditor.MenuItem("Jean/context")]
         public static void DoLoad()
         {
-            Debug.LogError("Test");
+            /*Debug.LogError("Test");
 
             var warmupTyp = Type.GetType("__Hollywood.Assembly.C.dll.__WarmUpInjectedInterfaces");
 
@@ -19,7 +19,9 @@ namespace CSpace
 
             var valueIn = interf.GetValue(null);
 
-            Debug.Log(valueIn);
+            Debug.Log(valueIn);*/
+
+			//var t 
         }
 
     }

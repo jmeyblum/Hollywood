@@ -17,7 +17,7 @@ namespace Hollywood.Editor
 
 		public override string ToString()
 		{
-			return $"{Type.Name}, {Type.Scope}";
+			return $"{Type.FullName}, {Type.Scope}";
 		}
 
 		public override bool Equals(object obj)

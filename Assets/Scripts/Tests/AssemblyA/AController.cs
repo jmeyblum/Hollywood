@@ -2593,11 +2593,32 @@ namespace __Hollywood.__Assembly.A
 
 */
 
+public static class TestS
+{
+    [UnityEditor.MenuItem("Jean/Activate")]
+    public static void Activate()
+	{
+        var tc = System.Activator.CreateInstance(typeof(TestController), true); //
+	}
+}
+
 [Owns(typeof(IBInterface2))]
-public class TestController
+public class TestController : ParentAController
 {
     [Needs]
     IBInterface _myB;
+
+    public List<int> t = new List<int>();
+    public int toto = 5;
+
+    //
+
+    /*public TestController(string t) : base(int.Parse(t))
+	{
+        toto = 12;
+
+        Debug.Log(t);
+	}*/
 }
 
 public class TestControllerManual : IInjectable, IOwner
@@ -2605,6 +2626,11 @@ public class TestControllerManual : IInjectable, IOwner
 	IBInterface _myB;
 
 	HashSet<object> IOwner.__ownedInstances { get; set; }
+
+    private TestControllerManual()
+	{
+        Hollywood.Runtime.Injector.CreateOwnedInstance<IBInterface2>(this);
+	}
 
     void IInjectable.__ResolveDependencies()
 	{
