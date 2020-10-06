@@ -6,96 +6,122 @@ using UnityEngine.Assertions;
 
 namespace Hollywood.Runtime
 {
-    // TODO: Refactor IInjectable to set an owner, also add the onwed instance to the caller __ownedInstances. Doing so we should be able to get rid of the Owners stack, ResolveDependency<T>() should take the caller as a parameter and go up the owner chain (skiping the caller). ResolveOwnedInstances(IOwner owner) shouldn't have the push pop of owner. 
+	// TODO: Add callbacks for post dependency resolution (using interfaces) and also when disposing
+	// TODO: Implement OwnsAll
+	// TODO: Add attribute to ignore specific class from being resolved (non-abstract class implementing interface but only meant to be used by derived types)
+	// TODO: Add API to set/create contexts
+	// TODO: Think about custom instance creation (not Activator.CreateInstance)
+	// TODO: Think about dynamic resolution. Creating instances at runtime.
+	// TODO: Test performance of reflection calls
+	// TODO: Add callbacks for system events (dependency types not found...)
 
-    // TODO: Add callbacks for post dependency resolution (using interfaces) and also when disposing
-    // TODO: Implement OwnsAll
-    // TODO: Add attribute to ignore specific class from being resolved (non-abstract class implementing interface but only meant to be used by derived types)
-    // TODO: Add API to set/create contexts
-    // TODO: Think about custom instance creation (not Activator.CreateInstance)
-    // TODO: Think about dynamic resolution. Creating instances at runtime.
-    // TODO: Test performance of reflection calls
-    // TODO: Add callbacks for system events (dependency types not found...)
+	public static class Injector
+	{
+		private static IContext Context;
+		private static Hierarchy<object> Instances = new Hierarchy<object>();
+		private static Dictionary<object, InstanceData> InstancesData = new Dictionary<object, InstanceData>();
 
-    public static class Injector
-    {
-        [UnityEditor.MenuItem("Jean/context")]
-        public static void DoLoad()
-        {
-            var t = new ReflectionContext();
-        }
-
-        private static IContext Context;
-        private static Stack<object> Owners = new Stack<object>();
-
-        public static T ResolveDependency<T>()
-        {
-            foreach (var owner in Owners)
-            {
-                if (typeof(T).IsAssignableFrom(owner.GetType()))
-                {
-                    return (T)owner;
-                }
-                if (owner is IOwner iOwner && iOwner.__ownedInstances != null)
-                {
-                    foreach (var instance in iOwner.__ownedInstances)
-                    {
-                        if (typeof(T).IsAssignableFrom(instance.GetType()))
-                        {
-                            return (T)instance;
-                        }
-                    }
-                }
-            }
-
-            Debug.LogAssertion($"No {typeof(T)} found.");
-
-            return default;
-        }
-
-        public static T Instantiate<T>(IContext context = default, object owner = null) where T : class
+		/// <summary>
+		/// Finds a dependency of type T for the given object in parameter.
+		/// The object looking for a dependency must have been created by the Injector.
+		/// The dependency will be search in the owner ancestors of the object looking for it.
+		/// </summary>
+		/// <typeparam name="T">Type of the dependency.</typeparam>
+		/// <param name="injectable">The object looking for a dependency.</param>
+		/// <returns></returns>
+		public static T FindDependency<T>(object injectable)
 		{
-            var previousContext = Context;
-            Context = context;
+			Assert.IsTrue(Instances.Contains(injectable));
 
-            T instance = default;
-            try
-            {
-                instance = (T)Activator.CreateInstance(typeof(T), true);
+			var parent = Instances.GetParent(injectable);
 
-                if (instance is IInjectable iInjectable)
-                {
-                    iInjectable.__ResolveDependencies();
-                }
-            }
-            finally
+			while (parent != null)
 			{
-                Context = previousContext;
-            }
-
-            return instance;
-		}
-
-        public static void CreateOwnedInstance<T>(IOwner owner, IContext context = default)
-		{
-			if (owner.__ownedInstances != null)
-			{
-				foreach (var obj in owner.__ownedInstances)
+				if (typeof(T).IsAssignableFrom(parent.GetType()))
 				{
-					if (typeof(T).IsAssignableFrom(obj.GetType()))
+					return (T)parent;
+				}
+
+				foreach (var children in Instances.GetChildren(parent))
+				{
+					if (typeof(T).IsAssignableFrom(children.GetType()))
 					{
-						return;
+						return (T)children;
 					}
 				}
+
+				parent = Instances.GetParent(parent);
 			}
-			else
+
+			Debug.LogAssertion($"No {typeof(T)} found.");
+
+			return default;
+		}
+
+		/// <summary>
+		/// Finds or creates an instance of type T that will be owned by the optional owner in parameter.
+		/// The created instance will be immediately resolved.
+		/// If you want to delay resolution, you can use Advanced.AddInstance<T>() instead and call manually Advanced.ResolveInstance() on the returned instance. 
+		/// This might be needed if different instances owned by the same owner have a dependency with each other.
+		/// </summary>
+		/// <typeparam name="T"></typeparam>
+		/// <param name="context"></param>
+		/// <param name="owner"></param>
+		/// <returns></returns>
+		public static T GetInstance<T>(IContext context = default, object owner = null)
+		{
+			Assert.IsFalse(Instances.Locked);
+
+			var previousContext = Context;
+			Context = context;
+
+			T instance = default;
+			try
 			{
-				owner.__ownedInstances = new HashSet<object>();
+				instance = Advanced.AddInstance<T>(owner, context);
+
+				Advanced.ResolveInstance(instance);
+			}
+			finally
+			{
+				Context = previousContext;
 			}
 
-			T instance = CreateInstance<T>(context);
+			return instance;
+		}
 
-			owner.__ownedInstances.Add(instance);
+		/// <summary>
+		/// Dispose this instance and all owned instances.
+		/// This is usually called by the instance IDisposable.Dispose() method.
+		/// </summary>
+		/// <param name="instance"></param>
+		public static void DisposeInstance(object instance)
+		{
+			Assert.IsTrue(Instances.Contains(instance));
+			Assert.IsTrue(InstancesData.ContainsKey(instance));
+
+			// DisposeInstance is called recursively through disposable children Dispose() method.
+			// We don't want to remove children instances while iterating on them so we keep track if we are recursion depth 0 and only remove all instances at this point.
+			bool shouldRemoveInstances = !Instances.Locked;
+
+			Instances.Locked = true;
+
+			foreach (var child in Instances.GetChildren(instance))
+			{
+				if (child is IDisposable disposable)
+				{
+					disposable.Dispose();
+				}
+			}
+
+			Instances.Locked = false;
+
+			if (shouldRemoveInstances)
+			{
+				Instances.Remove(instance, recursively: true);
+			}
+
+			InstancesData.Remove(instance);
 		}
 
 		private static T CreateInstance<T>(IContext context = default)
@@ -110,36 +136,80 @@ namespace Hollywood.Runtime
 			return (T)Activator.CreateInstance(instanceType, true);
 		}
 
-		public static void ResolveOwnedInstances(IOwner owner)
-        {
-            Owners.Push(owner);
-
-            if (owner.__ownedInstances != null)
-            {
-                foreach (var instance in owner.__ownedInstances)
-                {
-                    if (instance is IInjectable injectable)
-                    {
-                        injectable.__ResolveDependencies();
-                    }
-                }
-            }
-
-            Owners.Pop();
-        }
-
-        public static void DisposeOwnedInstances(IOwner owner)
+		public static class Advanced
 		{
-            if (owner.__ownedInstances != null)
-            {
-                foreach (var instance in owner.__ownedInstances)
-                {
-                    if (instance is IDisposable disposable)
-                    {
-                        disposable.Dispose();
-                    }
-                }
-            }
+			/// <summary>
+			/// Adds an instance of type T for the specified optional owned.
+			/// This will return any existing instance that already matches the given type.
+			/// Instances created here are not automatically resolved. Use ResolveInstance() to do so.
+			/// </summary>
+			/// <typeparam name="T"></typeparam>
+			/// <param name="owner"></param>
+			/// <param name="context"></param>
+			/// <returns></returns>
+			public static T AddInstance<T>(object owner, IContext context = default)
+			{
+				Assert.IsTrue(owner == null || Instances.Contains(owner));
+
+				if (owner != null)
+				{
+					foreach (var children in Instances.GetChildren(owner))
+					{
+						if (typeof(T).IsAssignableFrom(children.GetType()))
+						{
+							return (T)children;
+						}
+					}
+				}
+
+				var instance = CreateInstance<T>(context);
+
+				Instances.Add(instance, owner);
+				InstancesData.Add(instance, new InstanceData());
+
+				return instance;
+			}
+
+			/// <summary>
+			/// Recursively resolves the specified instance.
+			/// </summary>
+			/// <param name="instance"></param>
+			public static void ResolveInstance(object instance)
+			{
+				Assert.IsTrue(Instances.Contains(instance));
+				Assert.IsTrue(InstancesData.ContainsKey(instance));
+
+				var instanceData = InstancesData[instance];
+
+				if (instanceData.Resolved)
+				{
+					return;
+				}
+
+				if (instance is IInjectable injectable)
+				{
+					injectable.__Resolve();
+				}
+				else
+				{
+					Internal.ResolveOwnedInstances(instance);
+				}
+
+				instanceData.Resolved = true;
+			}
 		}
-    }
+
+		public static class Internal
+		{
+			public static void ResolveOwnedInstances(object owner)
+			{
+				Assert.IsTrue(Instances.Contains(owner));
+
+				foreach (var instance in Instances.GetChildren(owner))
+				{
+					Advanced.ResolveInstance(instance);
+				}
+			}
+		}
+	}
 }

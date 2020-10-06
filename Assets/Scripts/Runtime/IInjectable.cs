@@ -8,6 +8,6 @@ namespace Hollywood.Runtime.Internal
     [EditorBrowsable(EditorBrowsableState.Never)]
     public interface IInjectable
     {
-        void __ResolveDependencies();
+        void __Resolve();
     }
 }

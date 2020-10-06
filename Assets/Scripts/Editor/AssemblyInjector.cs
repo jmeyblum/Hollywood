@@ -243,7 +243,7 @@ namespace Hollywood.Editor
 			InterfaceImplementation iinjectableType = new InterfaceImplementation(AssemblyDefinition.MainModule.ImportReference(IInjectableType));
 			injectableType.Type.Interfaces.Add(iinjectableType);
 
-			var resolveDependenciesInterfaceMethod = AssemblyDefinition.MainModule.ImportReference(typeof(IInjectable).GetMethod(nameof(IInjectable.__ResolveDependencies), System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic));
+			var resolveDependenciesInterfaceMethod = AssemblyDefinition.MainModule.ImportReference(typeof(IInjectable).GetMethod(nameof(IInjectable.__Resolve), System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic));
 			MethodDefinition resolveDependenciesMethod = new MethodDefinition($"{resolveDependenciesInterfaceMethod.DeclaringType}.{resolveDependenciesInterfaceMethod.Name}",
 				MethodAttributes.Private |
 				MethodAttributes.Final |
@@ -260,7 +260,7 @@ namespace Hollywood.Editor
 			{
 				resolveDependenciesMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
 
-				var resolveDependencyMethod = typeof(Injector).GetMethod(nameof(Injector.ResolveDependency), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+				var resolveDependencyMethod = typeof(Injector).GetMethod(nameof(Injector.FindDependency), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
 
 				var resolveDependencyGenericMethodReference = AssemblyDefinition.MainModule.ImportReference(resolveDependencyMethod);
 
@@ -275,7 +275,7 @@ namespace Hollywood.Editor
 			{
 				resolveDependenciesMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
 
-				var resolveOwnedInstancesMethod = typeof(Injector).GetMethod(nameof(Injector.ResolveOwnedInstances), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+				var resolveOwnedInstancesMethod = typeof(Injector).GetMethod(nameof(Injector.ResolveInstance), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
 
 				var resolveOwnedInstancesMethodReference = AssemblyDefinition.MainModule.ImportReference(resolveOwnedInstancesMethod);
 

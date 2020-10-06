@@ -75,9 +75,9 @@ public static class TestS
     public static void Activate()
 	{
         var context = new Hollywood.Runtime.ReflectionContext();
-        var p = Injector.Instantiate<ParentController>(context); //
+        var p = Injector.GetInstance<ParentController>(context); //
 
-        var t = Injector.Instantiate<TestController>();
+        var t = Injector.GetInstance<TestController>();
 	}
 }
 
@@ -115,21 +115,19 @@ public class TestController : ParentAController, ITestController
 	}*/
 }
 
-public class TestControllerManual : IInjectable, IOwner
+public class TestControllerManual : IInjectable
 {
 	IBInterface _myB;
 
-	HashSet<object> IOwner.__ownedInstances { get; set; }
-
     private TestControllerManual()
 	{
-        Hollywood.Runtime.Injector.CreateOwnedInstance<IBInterface2>(this);
+        Hollywood.Runtime.Injector.Advanced.AddInstance<IBInterface2>(this);
 	}
 
-    void IInjectable.__ResolveDependencies()
+    void IInjectable.__Resolve()
 	{
-        _myB = Hollywood.Runtime.Injector.ResolveDependency<IBInterface>();
+        _myB = Hollywood.Runtime.Injector.FindDependency<IBInterface>(this);
 
-        Hollywood.Runtime.Injector.ResolveOwnedInstances(this);
+        Hollywood.Runtime.Injector.Internal.ResolveOwnedInstances(this);
     }
 }
