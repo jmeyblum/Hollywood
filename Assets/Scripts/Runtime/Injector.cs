@@ -270,7 +270,17 @@ namespace Hollywood.Runtime
 					Internal.ResolveOwnedInstances(instance);
 				}
 
+				if(instance is IResolvable resolvable)
+				{
+					resolvable.Resolve();
+				}
+
 				instanceData.Resolved = true;
+
+				if(instance is IOnReadyListener onReadyListener)
+				{
+					onReadyListener.OnReady();
+				}
 			}
 
 			/// <summary>

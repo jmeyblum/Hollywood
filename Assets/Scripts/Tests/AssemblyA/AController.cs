@@ -42,7 +42,7 @@ public interface IParent
 }
 
 [Owns(typeof(IBInterface))]
-public class ParentController : IParent, IDisposable
+public class ParentController : IParent, IDisposable, IResolvable
 {
     int toto = 42;
 
@@ -58,6 +58,11 @@ public class ParentController : IParent, IDisposable
 	public void Dispose()
 	{
         Injector.DisposeInstance(m);
+	}
+
+	public void Resolve()
+	{
+        Injector.Advanced.ResolveInstance(m);
 	}
 }
 
