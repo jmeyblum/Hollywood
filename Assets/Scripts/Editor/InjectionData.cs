@@ -1,5 +1,6 @@
 ﻿
 using Mono.Cecil;
+using Mono.Cecil.Cil;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -7,6 +8,12 @@ namespace Hollywood.Editor
 {
     internal class InjectionData
 	{
+		private const string GetInstanceMethodName = nameof(Hollywood.Runtime.Injector.GetInstance);
+		private const string AddInstanceMethodName = nameof(Hollywood.Runtime.Injector.Advanced.AddInstance);
+		private const string AddInstancesMethodName = nameof(Hollywood.Runtime.Injector.Advanced.AddInstances);
+
+		private readonly string InjectorAdvancedTypeName = $"{AssemblyInjector.InjectorType.FullName}/{nameof(Hollywood.Runtime.Injector.Advanced)}";
+
 		public IEnumerable<InjectableType> InjectableTypes { get; private set; }
 		public IEnumerable<InjectedInterface> InjectedInterfaces { get; private set; }
 
@@ -58,6 +65,36 @@ namespace Hollywood.Editor
 
 						injectableType.neededInterfaceType.Add(neededField, interfaceType);
 						injectedInterfaces.Add(new InjectedInterface(interfaceType));
+					}
+				}
+
+				foreach(var method in typeDefinition.Methods)
+				{
+					if(method.HasBody)
+					{
+						foreach(var instruction in method.Body.Instructions)
+						{
+							if (instruction.OpCode == OpCodes.Call)
+							{
+								var methodReference = instruction.Operand as GenericInstanceMethod;
+								if (methodReference != null)
+								{
+									if (methodReference.DeclaringType.FullName == AssemblyInjector.InjectorType.FullName && methodReference.Name == GetInstanceMethodName)
+									{
+										var injectedType = methodReference.GenericArguments.First();
+
+										injectedInterfaces.Add(new InjectedInterface(injectedType));
+									}
+									else if(methodReference.DeclaringType.FullName == InjectorAdvancedTypeName && 
+										(methodReference.Name == AddInstanceMethodName || methodReference.Name == AddInstancesMethodName))
+									{
+										var injectedType = methodReference.GenericArguments.First();
+
+										injectedInterfaces.Add(new InjectedInterface(injectedType));
+									}
+								}
+							}
+						}
 					}
 				}
 

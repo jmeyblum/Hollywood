@@ -1,73 +1,24 @@
 ﻿using BSpace;
 using Hollywood.Runtime;
 using Hollywood.Runtime.Internal;
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using UnityEngine;
-/*
-[Owns(typeof(IBInterface2))]
-public class AController : MonoBehaviour
+
+public class Patate
 {
-    [Needs]
-    IBInterface _bInterface;
-}
-
-[Owns(typeof(IBInterface2))]
-public class AControllerFinal : System.IDisposable, IOwner, IInjectable
-{
-    [Needs]
-    IBInterface _bInterface;
-
-    [Needs]
-    IBInterface2 _bInterface2;
-
-    private bool __disposedValue;
-
-	public HashSet<object> __ownedInstances { get; set; }
-
-	public AControllerFinal()
-    {
-        Hollywood.Runtime.Injector.CreateOwnedInstance<IBInterface>(this);
-        Hollywood.Runtime.Injector.CreateOwnedInstance<IBInterface2>(this);
-    }
-
-    public void __ResolveDependencies()
+    public void Test()
 	{
-		_bInterface = Hollywood.Runtime.Injector.ResolveDependency<IBInterface>();
-		_bInterface2 = Hollywood.Runtime.Injector.ResolveDependency<IBInterface2>();
+        int i = 0;
 
-        // if root IInjectable :
-        Hollywood.Runtime.Injector.ResolveOwnedInstances(this);
-        // else base.__ResolveDependencies();
-    }
+        FormattableString s = $"Test: {((Func<int>)(()=> { ++i; return i; })).Invoke()}";
 
-    void System.IDisposable.Dispose()
-    {
-        if (!__disposedValue)
-        {
-            Hollywood.Runtime.Injector.DisposeOwnedInstances(this);
-
-            __disposedValue = true;
-        }
-    }
+        Console.WriteLine(s);
+        Console.WriteLine(s);
+	}
 }
-
-
-namespace __Hollywood.__Assembly.A
-{
-    public static class __WarmUpInjectedInterfaces
-    {
-        public static string[] __interfaces = new string[]
-        {
-            "IBInterface2",
-            "IBInterface",
-            "SomeInterface0",
-        };
-    }
-}
-
-*/
 
 public static class TestS
 {
@@ -75,14 +26,36 @@ public static class TestS
     public static void Activate()
 	{
         var context = new Hollywood.Runtime.ReflectionContext();
-        var p = Injector.GetInstance<ParentController>(context); //
+        var p = Injector.GetInstance<IParent>(context); //
 
-        var t = Injector.GetInstance<TestController>();
+        var t = Injector.GetInstance<ITestController>(context, p);
 	}
 }
 
+public interface IParent
+{
+
+}
+
 [Owns(typeof(IBInterface))]
-public class ParentController
+public class ParentController : IParent
+{
+    int toto = 42;
+
+	public ParentController()
+	{
+        Injector.Advanced.AddInstance<IManualOwned>(this, new Hollywood.Runtime.ReflectionContext());
+
+		toto = 12;
+	}
+}
+
+public interface IManualOwned
+{
+
+}
+
+public class ManualOwned : IManualOwned
 {
 
 }
@@ -115,18 +88,27 @@ public class TestController : ParentAController, ITestController
 	}*/
 }
 
-public class TestControllerManual : IInjectable
+//[Owns(typeof(IBInterface2))]
+public class TestControllerManual : IInjected
 {
-	IBInterface _myB;
+    //[Needs]
+    IBInterface _myB;
+    IBInterface2 _myB1;
 
     private TestControllerManual()
 	{
         Hollywood.Runtime.Injector.Advanced.AddInstance<IBInterface2>(this);
 	}
 
-    void IInjectable.__Resolve()
+	void IInjected.__Dispose()
+	{
+        Hollywood.Runtime.Injector.DisposeInstance(this);
+	}
+
+	void IInjected.__Resolve()
 	{
         _myB = Hollywood.Runtime.Injector.FindDependency<IBInterface>(this);
+        _myB1 = Hollywood.Runtime.Injector.FindDependency<IBInterface2>(this);
 
         Hollywood.Runtime.Injector.Internal.ResolveOwnedInstances(this);
     }

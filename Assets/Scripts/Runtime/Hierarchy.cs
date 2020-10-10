@@ -19,10 +19,14 @@ namespace Hollywood.Runtime.Internal
 				return;
 			}
 
-			Assert.IsFalse(Contains(element));
-			Assert.IsTrue(parent == null || Contains(parent));
+			if(parent != null && !Contains(parent))
+			{
+				Add(parent);
+			}
 
-			ChildToParent.Add(element, parent ?? element);
+			Assert.IsTrue(!Contains(element) || GetParent(element) == null);
+
+			ChildToParent[element] = parent ?? element;
 
 			if (parent != null)
 			{
@@ -69,9 +73,7 @@ namespace Hollywood.Runtime.Internal
 
 		public IEnumerable<T> GetChildren(T parent)
 		{
-			Assert.IsTrue(Contains(parent));
-
-			if (!ParentToChildren.TryGetValue(parent, out var children))
+			if (!Contains(parent) || !ParentToChildren.TryGetValue(parent, out var children))
 			{
 				return Enumerable.Empty<T>();
 			}

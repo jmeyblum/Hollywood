@@ -6,8 +6,9 @@ using UnityEngine;
 namespace Hollywood.Runtime.Internal
 {
     [EditorBrowsable(EditorBrowsableState.Never)]
-    public interface IInjectable
+    public interface IInjected
     {
         void __Resolve();
+        void __Dispose();
     }
 }

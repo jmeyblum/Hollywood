@@ -9,28 +9,57 @@ using Hollywood.Runtime.Internal;
 namespace Hollywood.Editor
 {
 	// TODO: support IOwner type when base types are IOwner (IOwner implementation must only exists in highest class, this will likely fuck-up if said base class is in another assembly, or maybe not since if base class is in another assembly it has already been compiled.)
-	// TODO: support IInjectable type when base types are IInjectable: __ResolveDependencies must be marked as override instead of virtual and not call Hollywood.Runtime.Injector.ResolveOwnedInstances(this); but base.__ResolveDependencies().
+	// TODO: support IInjected type when base types are IInjected: __ResolveDependencies must be marked as override instead of virtual and not call Hollywood.Runtime.Injector.ResolveOwnedInstances(this); but base.__ResolveDependencies().
 	// TODO: add settings to have a list of ignored assemblies
 
-
-	// TODO: validate that IInjectable and IOwner is not used by user
+	// TODO: validate that IInjected and IOwner is not used by user
 
 	internal class AssemblyInjector
 	{
+		internal static readonly Type InjectorType = typeof(Injector);
 		internal static readonly Type OwnsAttributeType = typeof(OwnsAttribute);
 		internal static readonly Type OwnsAllAttributeType = typeof(OwnsAllAttribute);
 		internal static readonly Type NeedsAttributeType = typeof(NeedsAttribute);
+		internal static readonly Type IInjectedType = typeof(IInjected);
 
-		internal static readonly Type IInjectableType = typeof(IInjectable);
-		internal static readonly Type IOwnerType = typeof(IOwner);
+		private const System.Reflection.BindingFlags StaticBindingFlags = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+		private const System.Reflection.BindingFlags InstanceBindingFlags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
 
-		private AssemblyDefinition AssemblyDefinition;
+		internal static readonly System.Reflection.MethodInfo InjectorAddInstanceMethod = typeof(Injector.Advanced).GetMethod(nameof(Injector.Advanced.AddInstance), StaticBindingFlags);
+		internal static readonly System.Reflection.MethodInfo InjectorAddInstancesMethod = typeof(Injector.Advanced).GetMethod(nameof(Injector.Advanced.AddInstances), StaticBindingFlags);
+
+		internal static readonly System.Reflection.MethodInfo FindDependencyMethod = typeof(Injector).GetMethod(nameof(Injector.FindDependency), StaticBindingFlags);
+
+		internal static readonly System.Reflection.MethodInfo ResolveOwnedInstancesMethod = typeof(Injector.Internal).GetMethod(nameof(Injector.Internal.ResolveOwnedInstances), StaticBindingFlags);
+
+		private readonly AssemblyDefinition AssemblyDefinition;
+		private readonly MethodReference InjectorAddInstanceMethodReference;
+		private readonly MethodReference InjectorAddInstancesMethodReference;
+
+		private readonly InterfaceImplementation IInjectedTypeImplementation;
+		private readonly MethodReference ResolveInterfaceMethod;
+
+		private readonly MethodReference FindDependencyGenericMethodReference;
+
+		private readonly MethodReference ResolveOwnedInstancesMethodReference;
 
 		private InjectionResult Result;
 
 		private AssemblyInjector(AssemblyDefinition assemblyDefinition)
 		{
 			AssemblyDefinition = assemblyDefinition;
+
+			// For Owners
+			InjectorAddInstanceMethodReference = AssemblyDefinition.MainModule.ImportReference(InjectorAddInstanceMethod);
+			InjectorAddInstancesMethodReference = AssemblyDefinition.MainModule.ImportReference(InjectorAddInstancesMethod);
+
+			// For Injected
+			IInjectedTypeImplementation = new InterfaceImplementation(AssemblyDefinition.MainModule.ImportReference(IInjectedType));
+			ResolveInterfaceMethod = AssemblyDefinition.MainModule.ImportReference(typeof(IInjected).GetMethod(nameof(IInjected.__Resolve), InstanceBindingFlags));
+			FindDependencyGenericMethodReference = AssemblyDefinition.MainModule.ImportReference(FindDependencyMethod);
+
+			// For Injected Owner
+			ResolveOwnedInstancesMethodReference = AssemblyDefinition.MainModule.ImportReference(ResolveOwnedInstancesMethod);
 
 			Inject();
 		}
@@ -68,86 +97,71 @@ namespace Hollywood.Editor
 		{
 			Result = InjectionResult.Modified;
 
-			// add IOwner if owner
-			bool isOwner = injectableType.ownedInterfaceType.Count > 0;
+			bool isOwner = injectableType.ownedInterfaceType.Count > 0 || injectableType.ownedAllInterfaceType.Count > 0;
 
 			if (isOwner)
 			{
 				InjectIOwner(injectableType);
 			}
 
-			InjectIInjectable(injectableType, isOwner);
+			InjectIInjected(injectableType, isOwner);
 
 			// add IDisposable if not here
-			// implements constructor
-			// implements __ResolveDependencies
 			// implements Dispose
 		}
 
 		private void InjectIOwner(InjectableType injectableType)
 		{
-			InterfaceImplementation iownerType = new InterfaceImplementation(AssemblyDefinition.MainModule.ImportReference(IOwnerType));
-			injectableType.Type.Interfaces.Add(iownerType);
+			var constructor = GetDefaultConstructor(injectableType);
+			var instructionInsertionIndex = FindValidInstructionInsertionIndex(constructor);
 
-			var objectHashsetType = AssemblyDefinition.MainModule.ImportReference(typeof(HashSet<object>));
-			string backingFieldName = $"<{IOwnerType.FullName}.{nameof(IOwner.__ownedInstances)}>k__BackingField";
-			var backingField = new FieldDefinition(backingFieldName, FieldAttributes.Private, objectHashsetType);
+			var addOwnedInstancesInstructions = new List<Instruction>();
 
-			injectableType.Type.Fields.Add(backingField);
+			AddInstructionsForOwner(InjectorAddInstanceMethodReference, injectableType.ownedInterfaceType, addOwnedInstancesInstructions);
+			AddInstructionsForOwner(InjectorAddInstancesMethodReference, injectableType.ownedAllInterfaceType, addOwnedInstancesInstructions);
 
-			string getOwnedInstancesInterfaceMethodName = $"get_{nameof(IOwner.__ownedInstances)}";
-			var ownerInterfaceGetOwnedInstancesMethod = AssemblyDefinition.MainModule.ImportReference(IOwnerType.GetMethod(getOwnedInstancesInterfaceMethodName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic));
+			for (int instructionIndex = addOwnedInstancesInstructions.Count - 1; instructionIndex >= 0; --instructionIndex)
+			{
+				constructor.Body.Instructions.Insert(instructionInsertionIndex, addOwnedInstancesInstructions[instructionIndex]);
+			}
+		}
 
-			var getOwnedInstancesMethodName = $"{ownerInterfaceGetOwnedInstancesMethod.DeclaringType}.{ownerInterfaceGetOwnedInstancesMethod.Name}";
+		private void AddInstructionsForOwner(MethodReference addInstanceGenericMethod, IEnumerable<TypeReference> ownedTypes, List<Instruction> instructions)
+		{
+			foreach (var ownedType in ownedTypes)
+			{
+				var addInstanceMethodReference = new GenericInstanceMethod(addInstanceGenericMethod);
+				addInstanceMethodReference.GenericArguments.Add(ownedType);
 
-			var ownedInstanceGetterMethod = new MethodDefinition(getOwnedInstancesMethodName,
-				MethodAttributes.Private |
-				MethodAttributes.Final |
-				MethodAttributes.HideBySig |
-				MethodAttributes.Virtual |
-				MethodAttributes.NewSlot |
-				MethodAttributes.SpecialName, objectHashsetType);
+				instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
+				instructions.Add(Instruction.Create(OpCodes.Ldnull));
+				instructions.Add(Instruction.Create(OpCodes.Call, addInstanceMethodReference));
+				instructions.Add(Instruction.Create(OpCodes.Pop));
+				instructions.Add(Instruction.Create(OpCodes.Nop));
+			}
+		}
 
-			ownedInstanceGetterMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
-			ownedInstanceGetterMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldfld, backingField));
-			ownedInstanceGetterMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
+		// TODO: move to a utility class
+		private static int FindValidInstructionInsertionIndex(MethodDefinition constructor)
+		{
+			int instructionInsertionIndex = 0;
+			foreach (var instruction in constructor.Body.Instructions)
+			{
+				++instructionInsertionIndex;
 
-			ownedInstanceGetterMethod.Overrides.Add(ownerInterfaceGetOwnedInstancesMethod);
+				if (instruction.OpCode == OpCodes.Call && instruction.Operand is MethodReference method && method.Name == ".ctor")
+				{
+					break;
+				}
+			}
 
-			injectableType.Type.Methods.Add(ownedInstanceGetterMethod);
+			return instructionInsertionIndex;
+		}
 
-			string setOwnedInstancesInterfaceMethodName = $"set_{nameof(IOwner.__ownedInstances)}";
-			var ownerInterfaceSetOwnedInstancesMethod = AssemblyDefinition.MainModule.ImportReference(IOwnerType.GetMethod(setOwnedInstancesInterfaceMethodName, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic));
-
-			var setOwnedInstancesMethodName = $"{ownerInterfaceSetOwnedInstancesMethod.DeclaringType}.{ownerInterfaceSetOwnedInstancesMethod.Name}";
-
-			var ownedInstancesSetterMethod = new MethodDefinition(setOwnedInstancesMethodName,
-				MethodAttributes.Public |
-				MethodAttributes.Final |
-				MethodAttributes.HideBySig |
-				MethodAttributes.Virtual |
-				MethodAttributes.NewSlot |
-				MethodAttributes.SpecialName, AssemblyDefinition.MainModule.ImportReference(typeof(void)));
-
-			ownedInstancesSetterMethod.Parameters.Add(new ParameterDefinition("value", ParameterAttributes.None, objectHashsetType));
-
-			ownedInstancesSetterMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
-			ownedInstancesSetterMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_1));
-			ownedInstancesSetterMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Stfld, backingField));
-			ownedInstancesSetterMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Nop));
-			ownedInstancesSetterMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
-
-			ownedInstancesSetterMethod.Overrides.Add(ownerInterfaceSetOwnedInstancesMethod);
-
-			injectableType.Type.Methods.Add(ownedInstancesSetterMethod);
-
-			var ownedInstancesProperty = new PropertyDefinition($"{IOwnerType.FullName}.{nameof(IOwner.__ownedInstances)}", PropertyAttributes.None, objectHashsetType);
-			ownedInstancesProperty.GetMethod = ownedInstanceGetterMethod;
-			ownedInstancesProperty.SetMethod = ownedInstancesSetterMethod;
-
-			injectableType.Type.Properties.Add(ownedInstancesProperty);
-
-			var constructor = injectableType.Type.Methods.FirstOrDefault(m => m.IsConstructor && !m.HasParameters && !m.IsStatic);
+		// TODO: move to a utility class
+		private MethodDefinition GetDefaultConstructor(InjectableType injectableType)
+		{
+			MethodDefinition constructor = injectableType.Type.Methods.FirstOrDefault(m => m.IsConstructor && !m.HasParameters && !m.IsStatic);
 			var existingConstructorWithParameters = injectableType.Type.Methods.FirstOrDefault(m => m.IsConstructor && m.HasParameters && !m.IsStatic);
 			bool newConstructor = constructor == null;
 			if (newConstructor)
@@ -184,7 +198,7 @@ namespace Hollywood.Editor
 					{
 						constructor.Body.Instructions.Add(instruction);
 
-						if(instructionIndex == lastStfldIndex)
+						if (instructionIndex == lastStfldIndex)
 						{
 							break;
 						}
@@ -201,50 +215,17 @@ namespace Hollywood.Editor
 
 				constructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
 				constructor.Body.Instructions.Add(Instruction.Create(OpCodes.Call, baseConstructor));
-				constructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));		
+				constructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
 			}
 
-			int instructionInsertionIndex = 0;
-			foreach (var instruction in constructor.Body.Instructions)
-			{
-				++instructionInsertionIndex;
-
-				if (instruction.OpCode == OpCodes.Call && instruction.Operand is MethodReference method && method.Name == ".ctor")
-				{
-					break;
-				}
-			}
-
-			var createOwnedInstancesInstructions = new List<Instruction>();
-
-			var createOwnedInstanceGenericMethod = typeof(Injector).GetMethod(nameof(Injector.CreateOwnedInstance), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-
-			var createOwnedInstanceGenericMethodReference = AssemblyDefinition.MainModule.ImportReference(createOwnedInstanceGenericMethod);
-
-			foreach (var ownedType in injectableType.ownedInterfaceType)
-			{
-				var createOwnedInstanceMethodReference = new GenericInstanceMethod(createOwnedInstanceGenericMethodReference);
-				createOwnedInstanceMethodReference.GenericArguments.Add(ownedType);
-
-				createOwnedInstancesInstructions.Add(Instruction.Create(OpCodes.Ldarg_0));
-				createOwnedInstancesInstructions.Add(Instruction.Create(OpCodes.Ldnull));
-				createOwnedInstancesInstructions.Add(Instruction.Create(OpCodes.Call, createOwnedInstanceMethodReference));
-				createOwnedInstancesInstructions.Add(Instruction.Create(OpCodes.Nop));
-			}
-
-			for(int instructionIndex = createOwnedInstancesInstructions.Count - 1; instructionIndex >= 0; --instructionIndex)
-			{
-				constructor.Body.Instructions.Insert(instructionInsertionIndex, createOwnedInstancesInstructions[instructionIndex]);
-			}
+			return constructor;
 		}
 
-		private void InjectIInjectable(InjectableType injectableType, bool isOwner)
+		private void InjectIInjected(InjectableType injectableType, bool isOwner)
 		{
-			InterfaceImplementation iinjectableType = new InterfaceImplementation(AssemblyDefinition.MainModule.ImportReference(IInjectableType));
-			injectableType.Type.Interfaces.Add(iinjectableType);
+			injectableType.Type.Interfaces.Add(IInjectedTypeImplementation);
 
-			var resolveDependenciesInterfaceMethod = AssemblyDefinition.MainModule.ImportReference(typeof(IInjectable).GetMethod(nameof(IInjectable.__Resolve), System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic));
-			MethodDefinition resolveDependenciesMethod = new MethodDefinition($"{resolveDependenciesInterfaceMethod.DeclaringType}.{resolveDependenciesInterfaceMethod.Name}",
+			MethodDefinition resolveMethod = new MethodDefinition($"{ResolveInterfaceMethod.DeclaringType}.{ResolveInterfaceMethod.Name}",
 				MethodAttributes.Private |
 				MethodAttributes.Final |
 				MethodAttributes.HideBySig |
@@ -252,40 +233,43 @@ namespace Hollywood.Editor
 				MethodAttributes.NewSlot,
 				AssemblyDefinition.MainModule.ImportReference(typeof(void)));
 
-			resolveDependenciesMethod.Overrides.Add(resolveDependenciesInterfaceMethod);
+			resolveMethod.Overrides.Add(ResolveInterfaceMethod);
 
-			resolveDependenciesMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Nop));
+			resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Nop));
 
-			foreach (var neededField in injectableType.neededInterfaceType)
-			{
-				resolveDependenciesMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
-
-				var resolveDependencyMethod = typeof(Injector).GetMethod(nameof(Injector.FindDependency), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-
-				var resolveDependencyGenericMethodReference = AssemblyDefinition.MainModule.ImportReference(resolveDependencyMethod);
-
-				var resolveDependencyMethodReference = new GenericInstanceMethod(resolveDependencyGenericMethodReference);
-				resolveDependencyMethodReference.GenericArguments.Add(neededField.Value);
-
-				resolveDependenciesMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Call, resolveDependencyMethodReference));
-				resolveDependenciesMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Stfld, neededField.Key));
-			}
+			AddFindDependenciesInstructions(injectableType, resolveMethod);
 
 			if (isOwner)
 			{
-				resolveDependenciesMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
-
-				var resolveOwnedInstancesMethod = typeof(Injector).GetMethod(nameof(Injector.ResolveInstance), System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-
-				var resolveOwnedInstancesMethodReference = AssemblyDefinition.MainModule.ImportReference(resolveOwnedInstancesMethod);
-
-				resolveDependenciesMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Call, resolveOwnedInstancesMethodReference));
-				resolveDependenciesMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Nop));
+				AddInjectedOwnerInstructions(resolveMethod);
 			}
 
-			resolveDependenciesMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
+			resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
 
-			injectableType.Type.Methods.Add(resolveDependenciesMethod);
+			injectableType.Type.Methods.Add(resolveMethod);
+		}
+
+		private void AddInjectedOwnerInstructions(MethodDefinition resolveMethod)
+		{
+			resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
+
+			resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Call, ResolveOwnedInstancesMethodReference));
+			resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Nop));
+		}
+
+		private void AddFindDependenciesInstructions(InjectableType injectableType, MethodDefinition resolveMethod)
+		{
+			foreach (var neededField in injectableType.neededInterfaceType)
+			{
+				resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
+				resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
+
+				var resolveDependencyMethodReference = new GenericInstanceMethod(FindDependencyGenericMethodReference);
+				resolveDependencyMethodReference.GenericArguments.Add(neededField.Value);
+
+				resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Call, resolveDependencyMethodReference));
+				resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Stfld, neededField.Key));
+			}
 		}
 
 		private void Inject(IEnumerable<InjectedInterface> injectedInterfaces)
