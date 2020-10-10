@@ -48,7 +48,6 @@ namespace Hollywood.Runtime.Internal
 			}
 
 			Assert.IsTrue(Contains(element));
-			Assert.IsTrue(!recursively || GetChildren(element).Count() == 0);
 
 			if (recursively)
 			{

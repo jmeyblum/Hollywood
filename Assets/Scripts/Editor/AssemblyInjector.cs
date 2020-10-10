@@ -29,8 +29,9 @@ namespace Hollywood.Editor
 		internal static readonly System.Reflection.MethodInfo InjectorAddInstancesMethod = typeof(Injector.Advanced).GetMethod(nameof(Injector.Advanced.AddInstances), StaticBindingFlags);
 
 		internal static readonly System.Reflection.MethodInfo FindDependencyMethod = typeof(Injector).GetMethod(nameof(Injector.FindDependency), StaticBindingFlags);
-
+		
 		internal static readonly System.Reflection.MethodInfo ResolveOwnedInstancesMethod = typeof(Injector.Internal).GetMethod(nameof(Injector.Internal.ResolveOwnedInstances), StaticBindingFlags);
+		internal static readonly System.Reflection.MethodInfo DisposeOwnedInstancesMethod = typeof(Injector.Internal).GetMethod(nameof(Injector.Internal.DisposeOwnedInstances), StaticBindingFlags);
 
 		private readonly AssemblyDefinition AssemblyDefinition;
 		private readonly MethodReference InjectorAddInstanceMethodReference;
@@ -38,10 +39,12 @@ namespace Hollywood.Editor
 
 		private readonly InterfaceImplementation IInjectedTypeImplementation;
 		private readonly MethodReference ResolveInterfaceMethod;
+		private readonly MethodReference DiposeInterfaceMethod;
 
 		private readonly MethodReference FindDependencyGenericMethodReference;
 
 		private readonly MethodReference ResolveOwnedInstancesMethodReference;
+		private readonly MethodReference DisposeOwnedInstancesMethodReference;
 
 		private InjectionResult Result;
 
@@ -56,7 +59,9 @@ namespace Hollywood.Editor
 			// For Injected
 			IInjectedTypeImplementation = new InterfaceImplementation(AssemblyDefinition.MainModule.ImportReference(IInjectedType));
 			ResolveInterfaceMethod = AssemblyDefinition.MainModule.ImportReference(typeof(IInjected).GetMethod(nameof(IInjected.__Resolve), InstanceBindingFlags));
+			DiposeInterfaceMethod = AssemblyDefinition.MainModule.ImportReference(typeof(IInjected).GetMethod(nameof(IInjected.__Dispose), InstanceBindingFlags));
 			FindDependencyGenericMethodReference = AssemblyDefinition.MainModule.ImportReference(FindDependencyMethod);
+			DisposeOwnedInstancesMethodReference = AssemblyDefinition.MainModule.ImportReference(DisposeOwnedInstancesMethod);
 
 			// For Injected Owner
 			ResolveOwnedInstancesMethodReference = AssemblyDefinition.MainModule.ImportReference(ResolveOwnedInstancesMethod);
@@ -105,9 +110,6 @@ namespace Hollywood.Editor
 			}
 
 			InjectIInjected(injectableType, isOwner);
-
-			// add IDisposable if not here
-			// implements Dispose
 		}
 
 		private void InjectIOwner(InjectableType injectableType)
@@ -225,6 +227,35 @@ namespace Hollywood.Editor
 		{
 			injectableType.Type.Interfaces.Add(IInjectedTypeImplementation);
 
+			AddResolveMethod(injectableType, isOwner);
+			AddDisposeMethod(injectableType, isOwner);
+		}
+
+		private void AddDisposeMethod(InjectableType injectableType, bool isOwner)
+		{
+			MethodDefinition resolveMethod = new MethodDefinition($"{DiposeInterfaceMethod.DeclaringType}.{DiposeInterfaceMethod.Name}",
+				MethodAttributes.Private |
+				MethodAttributes.Final |
+				MethodAttributes.HideBySig |
+				MethodAttributes.Virtual |
+				MethodAttributes.NewSlot,
+				AssemblyDefinition.MainModule.ImportReference(typeof(void)));
+
+			resolveMethod.Overrides.Add(DiposeInterfaceMethod);
+
+			resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Nop));
+
+			resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
+			resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Call, DisposeOwnedInstancesMethodReference));
+			resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Nop));
+
+			resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
+
+			injectableType.Type.Methods.Add(resolveMethod);
+		}
+
+		private void AddResolveMethod(InjectableType injectableType, bool isOwner)
+		{
 			MethodDefinition resolveMethod = new MethodDefinition($"{ResolveInterfaceMethod.DeclaringType}.{ResolveInterfaceMethod.Name}",
 				MethodAttributes.Private |
 				MethodAttributes.Final |
@@ -274,7 +305,7 @@ namespace Hollywood.Editor
 
 		private void Inject(IEnumerable<InjectedInterface> injectedInterfaces)
 		{
-			if(injectedInterfaces.Count() == 0)
+			if (injectedInterfaces.Count() == 0)
 			{
 				return;
 			}
@@ -293,7 +324,7 @@ namespace Hollywood.Editor
 			injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_I4, injectedInterfaces.Count()));
 			injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Newarr, AssemblyDefinition.MainModule.ImportReference(typeof(string))));
 			int injectedInterfaceIndex = 0;
-			foreach(var injectedInterface in injectedInterfaces)
+			foreach (var injectedInterface in injectedInterfaces)
 			{
 				injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Dup));
 
@@ -332,7 +363,7 @@ namespace Hollywood.Editor
 					}
 					injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(code));
 				}
-				else if(injectedInterfaceIndex < 128)
+				else if (injectedInterfaceIndex < 128)
 				{
 					injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_I4_S, (sbyte)injectedInterfaceIndex));
 				}

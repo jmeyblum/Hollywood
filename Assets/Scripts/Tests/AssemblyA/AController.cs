@@ -25,10 +25,14 @@ public static class TestS
     [UnityEditor.MenuItem("Jean/Activate")]
     public static void Activate()
 	{
+        Injector.Reset();
+
         var context = new Hollywood.Runtime.ReflectionContext();
         var p = Injector.GetInstance<IParent>(context); //
 
         var t = Injector.GetInstance<ITestController>(context, p);
+
+        Injector.DisposeInstance(p);
 	}
 }
 
@@ -38,15 +42,22 @@ public interface IParent
 }
 
 [Owns(typeof(IBInterface))]
-public class ParentController : IParent
+public class ParentController : IParent, IDisposable
 {
     int toto = 42;
 
+    private IManualOwned m;
+
 	public ParentController()
 	{
-        Injector.Advanced.AddInstance<IManualOwned>(this, new Hollywood.Runtime.ReflectionContext());
+        m = Injector.Advanced.AddInstance<IManualOwned>(this, new Hollywood.Runtime.ReflectionContext());
 
 		toto = 12;
+	}
+
+	public void Dispose()
+	{
+        Injector.DisposeInstance(m);
 	}
 }
 
