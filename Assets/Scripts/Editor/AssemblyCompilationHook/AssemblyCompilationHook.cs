@@ -1,13 +1,12 @@
-﻿using Mono.Cecil;
-using System;
+﻿using Hollywood.Editor.AssemblyInjection;
+using Mono.Cecil;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.Compilation;
 
-namespace Hollywood.Editor
+namespace Hollywood.Editor.AssemblyCompilationHook
 {
-
-	public static class PostAssemblyCompilationProcessor
+	internal static class AssemblyCompilationHook
 	{
 		[InitializeOnLoadMethod]
 		public static void OnInitializeOnLoad()
@@ -17,25 +16,34 @@ namespace Hollywood.Editor
 		}
 
 		private static void OnCompilationFinished(string assemblyPath, CompilerMessage[] compilerMessages)
-		{
-
+		{		
 			if (compilerMessages.Any(msg => msg.type == CompilerMessageType.Error) == true)
 			{
 				return;
 			}
 
-			if (assemblyPath.Contains("Unity"))
+			if(!IsIncluded(assemblyPath))
 			{
 				return;
 			}
 
-			// TODO -jmeyblum: remove later
-			if (!assemblyPath.Contains("Assembly.A"))
-			{
-				return;
-			}
+			UnityEngine.Debug.Log(assemblyPath);
 
 			Inject(assemblyPath);
+		}
+
+		public static bool IsIncluded(string assemblyPath)
+		{
+			var projectSettings = ProjectSettingsProvider.TryLoadProjectSettings();
+
+			if(!projectSettings)
+			{
+				return !DefaultAssemblyInclusionRule.DoesAssemblyNameStartsWithDefaultExclusionPrefixes(assemblyPath);
+			}
+			else
+			{
+				return projectSettings.AssemblyInclusionRules?.Any(rule => !rule.IsIncluded(assemblyPath)) != true;
+			}
 		}
 
 		public static void Inject(string assemblyPath)

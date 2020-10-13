@@ -4,7 +4,7 @@ using Mono.Cecil.Cil;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Hollywood.Editor
+namespace Hollywood.Editor.AssemblyInjection
 {
     internal class InjectionData
 	{

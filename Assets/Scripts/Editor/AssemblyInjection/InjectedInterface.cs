@@ -3,7 +3,7 @@ using Mono.Cecil;
 using System;
 using System.Collections.Generic;
 
-namespace Hollywood.Editor
+namespace Hollywood.Editor.AssemblyInjection
 {
 
 	public class InjectedInterface : IEquatable<InjectedInterface>

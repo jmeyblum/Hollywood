@@ -1,7 +1,7 @@
 {
-    "name": "Hollywood.Editor",
+    "name": "Hollywood.Editor.AssemblyCompilationHook",
     "references": [
-        "GUID:c43b95b88c212a8499e9e59de5572223"
+        "GUID:6c23540c28bfe504ab6f20d148b44470"
     ],
     "includePlatforms": [
         "Editor"

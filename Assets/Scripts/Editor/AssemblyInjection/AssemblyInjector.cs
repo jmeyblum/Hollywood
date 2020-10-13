@@ -5,33 +5,34 @@ using System.Linq;
 using Hollywood.Runtime;
 using Mono.Cecil.Cil;
 using Hollywood.Runtime.Internal;
+using Mono.Collections.Generic;
 
-namespace Hollywood.Editor
+namespace Hollywood.Editor.AssemblyInjection
 {
-	// TODO: support IOwner type when base types are IOwner (IOwner implementation must only exists in highest class, this will likely fuck-up if said base class is in another assembly, or maybe not since if base class is in another assembly it has already been compiled.)
 	// TODO: support IInjected type when base types are IInjected: __ResolveDependencies must be marked as override instead of virtual and not call Hollywood.Runtime.Injector.ResolveOwnedInstances(this); but base.__ResolveDependencies().
 	// TODO: add settings to have a list of ignored assemblies
 
 	// TODO: validate that IInjected and IOwner is not used by user
 
-	internal class AssemblyInjector
+	public class AssemblyInjector
 	{
 		internal static readonly Type InjectorType = typeof(Injector);
 		internal static readonly Type OwnsAttributeType = typeof(OwnsAttribute);
 		internal static readonly Type OwnsAllAttributeType = typeof(OwnsAllAttribute);
 		internal static readonly Type NeedsAttributeType = typeof(NeedsAttribute);
-		internal static readonly Type IInjectedType = typeof(IInjected);
+
+		private static readonly Type IInjectedType = typeof(IInjected);
 
 		private const System.Reflection.BindingFlags StaticBindingFlags = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
 		private const System.Reflection.BindingFlags InstanceBindingFlags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
 
-		internal static readonly System.Reflection.MethodInfo InjectorAddInstanceMethod = typeof(Injector.Advanced).GetMethod(nameof(Injector.Advanced.AddInstance), StaticBindingFlags);
-		internal static readonly System.Reflection.MethodInfo InjectorAddInstancesMethod = typeof(Injector.Advanced).GetMethod(nameof(Injector.Advanced.AddInstances), StaticBindingFlags);
+		private static readonly System.Reflection.MethodInfo InjectorAddInstanceMethod = typeof(Injector.Advanced).GetMethod(nameof(Injector.Advanced.AddInstance), StaticBindingFlags);
+		private static readonly System.Reflection.MethodInfo InjectorAddInstancesMethod = typeof(Injector.Advanced).GetMethod(nameof(Injector.Advanced.AddInstances), StaticBindingFlags);
 
-		internal static readonly System.Reflection.MethodInfo FindDependencyMethod = typeof(Injector).GetMethod(nameof(Injector.FindDependency), StaticBindingFlags);
-		
-		internal static readonly System.Reflection.MethodInfo ResolveOwnedInstancesMethod = typeof(Injector.Internal).GetMethod(nameof(Injector.Internal.ResolveOwnedInstances), StaticBindingFlags);
-		internal static readonly System.Reflection.MethodInfo DisposeOwnedInstancesMethod = typeof(Injector.Internal).GetMethod(nameof(Injector.Internal.DisposeOwnedInstances), StaticBindingFlags);
+		private static readonly System.Reflection.MethodInfo FindDependencyMethod = typeof(Injector).GetMethod(nameof(Injector.FindDependency), StaticBindingFlags);
+
+		private static readonly System.Reflection.MethodInfo ResolveOwnedInstancesMethod = typeof(Injector.Internal).GetMethod(nameof(Injector.Internal.ResolveOwnedInstances), StaticBindingFlags);
+		private static readonly System.Reflection.MethodInfo DisposeOwnedInstancesMethod = typeof(Injector.Internal).GetMethod(nameof(Injector.Internal.DisposeOwnedInstances), StaticBindingFlags);
 
 		private readonly AssemblyDefinition AssemblyDefinition;
 		private readonly MethodReference InjectorAddInstanceMethodReference;
@@ -45,6 +46,11 @@ namespace Hollywood.Editor
 
 		private readonly MethodReference ResolveOwnedInstancesMethodReference;
 		private readonly MethodReference DisposeOwnedInstancesMethodReference;
+
+		private readonly TypeReference StringType;
+		private readonly TypeReference StringArrayType;
+		private readonly TypeReference VoidType;
+		private readonly TypeReference ObjectType;
 
 		private InjectionResult Result;
 
@@ -65,6 +71,11 @@ namespace Hollywood.Editor
 
 			// For Injected Owner
 			ResolveOwnedInstancesMethodReference = AssemblyDefinition.MainModule.ImportReference(ResolveOwnedInstancesMethod);
+
+			StringType = AssemblyDefinition.MainModule.ImportReference(typeof(string));
+			StringArrayType = AssemblyDefinition.MainModule.ImportReference(typeof(string[]));
+			VoidType = AssemblyDefinition.MainModule.ImportReference(typeof(void));
+			ObjectType = AssemblyDefinition.MainModule.ImportReference(typeof(System.Object));
 
 			Inject();
 		}
@@ -143,7 +154,6 @@ namespace Hollywood.Editor
 			}
 		}
 
-		// TODO: move to a utility class
 		private static int FindValidInstructionInsertionIndex(MethodDefinition constructor)
 		{
 			int instructionInsertionIndex = 0;
@@ -160,7 +170,6 @@ namespace Hollywood.Editor
 			return instructionInsertionIndex;
 		}
 
-		// TODO: move to a utility class
 		private MethodDefinition GetDefaultConstructor(InjectableType injectableType)
 		{
 			MethodDefinition constructor = injectableType.Type.Methods.FirstOrDefault(m => m.IsConstructor && !m.HasParameters && !m.IsStatic);
@@ -173,7 +182,7 @@ namespace Hollywood.Editor
 					MethodAttributes.HideBySig |
 					MethodAttributes.SpecialName |
 					MethodAttributes.RTSpecialName,
-					AssemblyDefinition.MainModule.ImportReference(typeof(void)));
+					VoidType);
 
 				injectableType.Type.Methods.Add(constructor);
 
@@ -210,7 +219,7 @@ namespace Hollywood.Editor
 				}
 
 				var baseType = AssemblyDefinition.MainModule.ImportReference(injectableType.Type.BaseType);
-				var baseConstructor = new MethodReference(".ctor", AssemblyDefinition.MainModule.ImportReference(typeof(void)), baseType);
+				var baseConstructor = new MethodReference(".ctor", VoidType, baseType);
 				baseConstructor.HasThis = true;
 
 				baseConstructor = AssemblyDefinition.MainModule.ImportReference(baseConstructor);
@@ -239,7 +248,7 @@ namespace Hollywood.Editor
 				MethodAttributes.HideBySig |
 				MethodAttributes.Virtual |
 				MethodAttributes.NewSlot,
-				AssemblyDefinition.MainModule.ImportReference(typeof(void)));
+				VoidType);
 
 			resolveMethod.Overrides.Add(DiposeInterfaceMethod);
 
@@ -262,7 +271,7 @@ namespace Hollywood.Editor
 				MethodAttributes.HideBySig |
 				MethodAttributes.Virtual |
 				MethodAttributes.NewSlot,
-				AssemblyDefinition.MainModule.ImportReference(typeof(void)));
+				VoidType);
 
 			resolveMethod.Overrides.Add(ResolveInterfaceMethod);
 
@@ -313,25 +322,37 @@ namespace Hollywood.Editor
 			Result = InjectionResult.Modified;
 
 			var injectedInterfacesType = new TypeDefinition($"__Hollywood.{AssemblyDefinition.MainModule.Name}", "__InjectedInterfaces", TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit);
-			injectedInterfacesType.BaseType = AssemblyDefinition.MainModule.ImportReference(typeof(System.Object));
-			var injectedInterfacesConstructor = new MethodDefinition(".cctor", MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.Static | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName, AssemblyDefinition.MainModule.ImportReference(typeof(void)));
-			var interfaceNamesMember = new FieldDefinition("__interfaceNames", FieldAttributes.Public | FieldAttributes.Static, AssemblyDefinition.MainModule.ImportReference(typeof(string[])));
+			injectedInterfacesType.BaseType = ObjectType;
+			var injectedInterfacesConstructor = new MethodDefinition(".cctor", MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.Static | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName, VoidType);
+			var interfaceNamesMember = new FieldDefinition("__interfaceNames", FieldAttributes.Public | FieldAttributes.Static, StringArrayType);
 			injectedInterfacesType.Methods.Add(injectedInterfacesConstructor);
 			injectedInterfacesType.Fields.Add(interfaceNamesMember);
 
 			AssemblyDefinition.MainModule.Types.Add(injectedInterfacesType);
 
-			injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_I4, injectedInterfaces.Count()));
-			injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Newarr, AssemblyDefinition.MainModule.ImportReference(typeof(string))));
-			int injectedInterfaceIndex = 0;
-			foreach (var injectedInterface in injectedInterfaces)
-			{
-				injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Dup));
+			var injectedInterfaceNames = injectedInterfaces.Select(i => i.ToString());
+			var instructions = injectedInterfacesConstructor.Body.Instructions;
 
-				if (injectedInterfaceIndex <= 8)
+			AddNewStringArrayInstructions(injectedInterfaceNames, instructions);
+
+			instructions.Add(Instruction.Create(OpCodes.Stsfld, interfaceNamesMember));
+			instructions.Add(Instruction.Create(OpCodes.Ret));
+		}
+
+		public void AddNewStringArrayInstructions(IEnumerable<string> arrayValues, Collection<Instruction> instructions)
+		{
+			instructions.Add(Instruction.Create(OpCodes.Ldc_I4, arrayValues.Count()));
+			instructions.Add(Instruction.Create(OpCodes.Newarr, StringType));
+			int valueIndex = 0;
+
+			foreach (var arrayValue in arrayValues)
+			{
+				instructions.Add(Instruction.Create(OpCodes.Dup));
+
+				if (valueIndex <= 8)
 				{
 					OpCode code = default;
-					switch (injectedInterfaceIndex)
+					switch (valueIndex)
 					{
 						case 0:
 							code = OpCodes.Ldc_I4_0;
@@ -361,28 +382,25 @@ namespace Hollywood.Editor
 							code = OpCodes.Ldc_I4_8;
 							break;
 					}
-					injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(code));
+					instructions.Add(Instruction.Create(code));
 				}
-				else if (injectedInterfaceIndex < 128)
+				else if (valueIndex < 128)
 				{
-					injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_I4_S, (sbyte)injectedInterfaceIndex));
+					instructions.Add(Instruction.Create(OpCodes.Ldc_I4_S, (sbyte)valueIndex));
 				}
 				else
 				{
-					injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_I4, injectedInterfaceIndex));
+					instructions.Add(Instruction.Create(OpCodes.Ldc_I4, valueIndex));
 				}
 
-				injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ldstr, injectedInterface.ToString()));
-				injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Stelem_Ref));
+				instructions.Add(Instruction.Create(OpCodes.Ldstr, arrayValue));
+				instructions.Add(Instruction.Create(OpCodes.Stelem_Ref));
 
-				++injectedInterfaceIndex;
+				++valueIndex;
 			}
-
-			injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Stsfld, interfaceNamesMember));
-			injectedInterfacesConstructor.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
 		}
 
-		internal static InjectionResult Inject(AssemblyDefinition assemblyDefinition)
+		public static InjectionResult Inject(AssemblyDefinition assemblyDefinition)
 		{
 			return new AssemblyInjector(assemblyDefinition).Result;
 		}

@@ -8,11 +8,9 @@ using UnityEngine.Assertions;
 
 namespace Hollywood.Runtime
 {
-	// TODO: Add callbacks for post dependency resolution (using interfaces) and also when disposing
 	// TODO: Add attribute to ignore specific class from being resolved (non-abstract class implementing interface but only meant to be used by derived types)
 	// TODO: Add API to set/create contexts
 	// TODO: Think about custom instance creation (not Activator.CreateInstance)
-	// TODO: Think about dynamic resolution. Creating instances at runtime.
 	// TODO: Test performance of reflection calls
 	// TODO: Add callbacks for system events (dependency types not found...)
 

@@ -2,7 +2,7 @@
 using Mono.Cecil;
 using System.Collections.Generic;
 
-namespace Hollywood.Editor
+namespace Hollywood.Editor.AssemblyInjection
 {
 	internal class InjectableType
 	{
