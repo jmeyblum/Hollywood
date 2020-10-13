@@ -69,8 +69,6 @@ namespace Hollywood.Runtime
 		/// <returns></returns>
 		public static T GetInstance<T>(IContext context = default, object owner = null)
 		{
-			Assert.IsFalse(Instances.Locked);
-
 			var previousContext = Context;
 			Context = context;
 
@@ -101,8 +99,6 @@ namespace Hollywood.Runtime
 		/// <returns></returns>
 		public static IEnumerable<T> GetInstances<T>(IContext context = default, object owner = null)
 		{
-			Assert.IsFalse(Instances.Locked);
-
 			var previousContext = Context;
 			Context = context;
 
@@ -131,31 +127,21 @@ namespace Hollywood.Runtime
 			Assert.IsTrue(Instances.Contains(instance));
 			Assert.IsTrue(InstancesData.ContainsKey(instance));
 
-			// DisposeInstance is called recursively through disposable children Dispose() method.
-			// We don't want to remove children instances while iterating on them so we keep track if we are recursion depth 0 and only remove all instances at this point.
-			bool currentlyLocked = Instances.Locked;
-
 			if(instance is IDisposable disposable)
 			{
 				disposable.Dispose();
 			}
 
-			foreach (var child in Instances.GetChildren(instance))
+			if (instance is IInjected injected)
 			{
-				Instances.Locked = true;
-
-				if (child is IInjected injected)
-				{
-					injected.__Dispose();
-				}
-
-				Instances.Locked = currentlyLocked;
+				injected.__Dispose();
+			}
+			else
+			{
+				Internal.DisposeOwnedInstances(instance);
 			}
 
-			if (!currentlyLocked)
-			{
-				Instances.Remove(instance, recursively: true);
-			}
+			Instances.Remove(instance, recursively: false);
 
 			InstancesData.Remove(instance);
 		}
@@ -312,9 +298,11 @@ namespace Hollywood.Runtime
 			{
 				Assert.IsTrue(Instances.Contains(owner));
 
-				foreach (var instance in Instances.GetChildren(owner))
+				while (Instances.GetChildren(owner).Any())
 				{
-					DisposeInstance(instance);
+					var child = Instances.GetChildren(owner).First();
+
+					DisposeInstance(child);
 				}
 			}
 		}

@@ -27,8 +27,6 @@ namespace Hollywood.Editor.AssemblyCompilationHook
 				return;
 			}
 
-			UnityEngine.Debug.Log(assemblyPath);
-
 			Inject(assemblyPath);
 		}
 

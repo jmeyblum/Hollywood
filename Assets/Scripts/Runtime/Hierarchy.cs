@@ -10,15 +10,8 @@ namespace Hollywood.Runtime.Internal
 		private Dictionary<T, HashSet<T>> ParentToChildren = new Dictionary<T, HashSet<T>>();
 		private Dictionary<T, T> ChildToParent = new Dictionary<T, T>();
 
-		public bool Locked { get; set; }
-
 		public void Add(T element, T parent = null)
 		{
-			if (Locked)
-			{
-				return;
-			}
-
 			if(parent != null && !Contains(parent))
 			{
 				Add(parent);
@@ -42,12 +35,8 @@ namespace Hollywood.Runtime.Internal
 
 		public void Remove(T element, bool recursively = false)
 		{
-			if (Locked)
-			{
-				return;
-			}
-
 			Assert.IsTrue(Contains(element));
+			Assert.IsTrue(!recursively || GetChildren(element).Count() == 0);
 
 			if (recursively)
 			{
@@ -61,6 +50,7 @@ namespace Hollywood.Runtime.Internal
 					}
 				}
 			}
+			ParentToChildren.Remove(element);
 
 			T parent = ChildToParent[element];
 			if (parent != element && ParentToChildren.TryGetValue(parent, out HashSet<T> parentChildren))
