@@ -1,0 +1,17 @@
+{
+    "name": "Hollywood.Editor.UnityAssemblyInjection",
+    "references": [
+        "GUID:6c23540c28bfe504ab6f20d148b44470"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

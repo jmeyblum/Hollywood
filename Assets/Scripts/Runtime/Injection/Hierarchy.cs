@@ -1,7 +1,5 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using UnityEngine.Assertions;
 
 namespace Hollywood.Runtime.Internal
 {
@@ -12,7 +10,7 @@ namespace Hollywood.Runtime.Internal
 
 		public void Add(T element, T parent = null)
 		{
-			if(parent != null && !Contains(parent))
+			if (parent != null && !Contains(parent))
 			{
 				Add(parent);
 			}
@@ -84,6 +82,12 @@ namespace Hollywood.Runtime.Internal
 			Assert.IsNotNull(element);
 
 			return ChildToParent.ContainsKey(element);
+		}
+
+		public void Reset()
+		{
+			ParentToChildren.Clear();
+			ChildToParent.Clear();
 		}
 	}
 }

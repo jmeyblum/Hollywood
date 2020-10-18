@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
 
-namespace Hollywood.Editor.AssemblyCompilationHook
+namespace Hollywood.Editor.UnityAssemblyInjection
 {
 	public class ProjectSettingsProvider : SettingsProvider
 	{
@@ -18,11 +18,11 @@ namespace Hollywood.Editor.AssemblyCompilationHook
 		{
 			get
 			{
-				if(!_projectSettings)
+				if (!_projectSettings)
 				{
 					_projectSettings = TryLoadProjectSettings();
 
-					if(!_projectSettings)
+					if (!_projectSettings)
 					{
 						_projectSettings = ScriptableObject.CreateInstance<ProjectSettings>();
 					}

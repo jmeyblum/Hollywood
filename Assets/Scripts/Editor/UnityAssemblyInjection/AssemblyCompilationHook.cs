@@ -4,7 +4,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEditor.Compilation;
 
-namespace Hollywood.Editor.AssemblyCompilationHook
+namespace Hollywood.Editor.UnityAssemblyInjection
 {
 	internal static class AssemblyCompilationHook
 	{
@@ -16,13 +16,13 @@ namespace Hollywood.Editor.AssemblyCompilationHook
 		}
 
 		private static void OnCompilationFinished(string assemblyPath, CompilerMessage[] compilerMessages)
-		{		
+		{
 			if (compilerMessages.Any(msg => msg.type == CompilerMessageType.Error) == true)
 			{
 				return;
 			}
 
-			if(!IsIncluded(assemblyPath))
+			if (!IsIncluded(assemblyPath))
 			{
 				return;
 			}
@@ -34,7 +34,7 @@ namespace Hollywood.Editor.AssemblyCompilationHook
 		{
 			var projectSettings = ProjectSettingsProvider.TryLoadProjectSettings();
 
-			if(!projectSettings)
+			if (!projectSettings)
 			{
 				return !DefaultAssemblyInclusionRule.DoesAssemblyNameStartsWithDefaultExclusionPrefixes(assemblyPath);
 			}
@@ -50,7 +50,7 @@ namespace Hollywood.Editor.AssemblyCompilationHook
 			{
 				var injectionResult = AssemblyInjector.Inject(assemblyDefinition);
 
-				if(injectionResult == InjectionResult.Modified)
+				if (injectionResult == InjectionResult.Modified)
 				{
 					assemblyDefinition.Write(new WriterParameters { WriteSymbols = true });
 				}

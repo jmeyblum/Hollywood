@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using UnityEngine;
 
-namespace Hollywood.Editor.AssemblyCompilationHook
+namespace Hollywood.Editor.UnityAssemblyInjection
 {
 	[CreateAssetMenu(menuName = "Hollywood/DefaultAssemblyInclusionRule")]
 	public class DefaultAssemblyInclusionRule : AssemblyInclusionRule

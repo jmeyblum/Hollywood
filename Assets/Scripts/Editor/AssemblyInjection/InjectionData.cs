@@ -6,7 +6,7 @@ using System.Linq;
 
 namespace Hollywood.Editor.AssemblyInjection
 {
-    internal class InjectionData
+	internal class InjectionData
 	{
 		private const string GetInstanceMethodName = nameof(Hollywood.Runtime.Injector.GetInstance);
 		private const string AddInstanceMethodName = nameof(Hollywood.Runtime.Injector.Advanced.AddInstance);
@@ -20,7 +20,7 @@ namespace Hollywood.Editor.AssemblyInjection
 		public InjectionData(ModuleDefinition moduleDefinition)
 		{
 			var injectableTypes = new HashSet<InjectableType>();
-			var injectedInterfaces = new HashSet<InjectedInterface>();			
+			var injectedInterfaces = new HashSet<InjectedInterface>();
 
 			foreach (var typeDefinition in moduleDefinition.Types)
 			{
@@ -68,11 +68,11 @@ namespace Hollywood.Editor.AssemblyInjection
 					}
 				}
 
-				foreach(var method in typeDefinition.Methods)
+				foreach (var method in typeDefinition.Methods)
 				{
-					if(method.HasBody)
+					if (method.HasBody)
 					{
-						foreach(var instruction in method.Body.Instructions)
+						foreach (var instruction in method.Body.Instructions)
 						{
 							if (instruction.OpCode == OpCodes.Call)
 							{
@@ -85,7 +85,7 @@ namespace Hollywood.Editor.AssemblyInjection
 
 										injectedInterfaces.Add(new InjectedInterface(injectedType));
 									}
-									else if(methodReference.DeclaringType.FullName == InjectorAdvancedTypeName && 
+									else if (methodReference.DeclaringType.FullName == InjectorAdvancedTypeName &&
 										(methodReference.Name == AddInstanceMethodName || methodReference.Name == AddInstancesMethodName))
 									{
 										var injectedType = methodReference.GenericArguments.First();

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-namespace Hollywood.Editor.AssemblyCompilationHook
+namespace Hollywood.Editor.UnityAssemblyInjection
 {
 	public class ProjectSettings : ScriptableObject
 	{

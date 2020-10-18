@@ -27,10 +27,10 @@ public static class TestS
 	{
         Injector.Reset();
 
-        var context = new Hollywood.Runtime.ReflectionContext();
+        var context = new Hollywood.Runtime.ReflectionTypeResolver();
         var p = Injector.GetInstance<IParent>(context); //
 
-        var t = Injector.GetInstance<ITestController>(context, p);
+        var t = Injector.GetInstance<ITestController>(context);
 
         Injector.DisposeInstance(p);
 	}
@@ -50,7 +50,7 @@ public class ParentController : IParent, IDisposable, IResolvable
 
 	public ParentController()
 	{
-        m = Injector.Advanced.AddInstance<IManualOwned>(this, new Hollywood.Runtime.ReflectionContext());
+        m = Injector.Advanced.AddInstance<IManualOwned>(this);
 
 		toto = 12;
 	}
