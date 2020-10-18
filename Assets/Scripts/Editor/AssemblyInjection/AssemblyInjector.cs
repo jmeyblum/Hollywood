@@ -147,7 +147,6 @@ namespace Hollywood.Editor.AssemblyInjection
 				addInstanceMethodReference.GenericArguments.Add(ownedType);
 
 				instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
-				instructions.Add(Instruction.Create(OpCodes.Ldnull));
 				instructions.Add(Instruction.Create(OpCodes.Call, addInstanceMethodReference));
 				instructions.Add(Instruction.Create(OpCodes.Pop));
 				instructions.Add(Instruction.Create(OpCodes.Nop));

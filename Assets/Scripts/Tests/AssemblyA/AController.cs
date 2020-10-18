@@ -25,12 +25,13 @@ public static class TestS
     [UnityEditor.MenuItem("Jean/Activate")]
     public static void Activate()
 	{
-        Injector.Reset();
+        DefaultInjectionContext defaultInjectionContext = new DefaultInjectionContext(new ReflectionTypeResolver(), new DefaultInstanceCreator());
 
-        var context = new Hollywood.Runtime.ReflectionTypeResolver();
-        var p = Injector.GetInstance<IParent>(context); //
+        Injector.InjectionContext = defaultInjectionContext;
 
-        var t = Injector.GetInstance<ITestController>(context);
+        var p = Injector.GetInstance<IParent>(); //
+
+        var t = Injector.GetInstance<ITestController>();
 
         Injector.DisposeInstance(p);
 	}
