@@ -320,10 +320,10 @@ namespace Hollywood.Editor.AssemblyInjection
 
 			Result = InjectionResult.Modified;
 
-			var injectedInterfacesType = new TypeDefinition(string.Format(Constants.ReflectionTypeResolver.AssemblyNameTemplate, AssemblyDefinition.MainModule.Name), Constants.ReflectionTypeResolver.TypeName, TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit);
+			var injectedInterfacesType = new TypeDefinition(string.Format(Constants.DefaultTypeResolver.AssemblyNameTemplate, AssemblyDefinition.MainModule.Name), Constants.DefaultTypeResolver.TypeName, TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit);
 			injectedInterfacesType.BaseType = ObjectType;
 			var injectedInterfacesConstructor = new MethodDefinition(Constants.TypeInitializerMethodName, MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.Static | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName, VoidType);
-			var interfaceNamesMember = new FieldDefinition(Constants.ReflectionTypeResolver.MemberName, FieldAttributes.Public | FieldAttributes.Static, StringArrayType);
+			var interfaceNamesMember = new FieldDefinition(Constants.DefaultTypeResolver.MemberName, FieldAttributes.Public | FieldAttributes.Static, StringArrayType);
 			injectedInterfacesType.Methods.Add(injectedInterfacesConstructor);
 			injectedInterfacesType.Fields.Add(interfaceNamesMember);
 

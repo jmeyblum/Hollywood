@@ -7,23 +7,23 @@ namespace Hollywood.Runtime
 {
 	// TODO: add settings to have a list of ignored assemblies
 
-	public class ReflectionTypeResolver : ITypeResolver
+	public class DefaultTypeResolver : ITypeResolver
 	{
 		private Dictionary<Type, HashSet<Type>> InterfaceToTypes = new Dictionary<Type, HashSet<Type>>();
 
-		public ReflectionTypeResolver()
+		public DefaultTypeResolver()
 		{
 			var assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a => !a.IsDynamic);
 
 			foreach (var assembly in assemblies)
 			{
-				var injectedInterfacesTypeName = string.Format(Constants.ReflectionTypeResolver.TypeNameTemplate, assembly.Modules.First().Name);
+				var injectedInterfacesTypeName = string.Format(Constants.DefaultTypeResolver.TypeNameTemplate, assembly.Modules.First().Name);
 
 				var injectedInterfacesType = assembly.GetType(injectedInterfacesTypeName, throwOnError: false);
 
 				if (injectedInterfacesType != null)
 				{
-					var interfaceNamesField = injectedInterfacesType.GetField(Constants.ReflectionTypeResolver.MemberName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+					var interfaceNamesField = injectedInterfacesType.GetField(Constants.DefaultTypeResolver.MemberName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
 
 					var interfaceNames = (string[])interfaceNamesField.GetValue(null);
 

@@ -2,7 +2,7 @@
 {
 	public static class Constants
 	{
-		public static class ReflectionTypeResolver
+		public static class DefaultTypeResolver
 		{
 			public const string AssemblyNamePrefix = "__Hollywood";
 			public const string TypeName = "__InjectedInterfaces";

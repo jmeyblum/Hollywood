@@ -22,9 +22,7 @@ public static class TestS
     [UnityEditor.MenuItem("Jean/Activate")]
     public static void Activate()
 	{
-        DefaultInjectionContext defaultInjectionContext = new DefaultInjectionContext(new ReflectionTypeResolver(), new DefaultInstanceCreator());
-
-        Injector.InjectionContext = defaultInjectionContext;
+        Hollywood.Runtime.UnityInjection.Helper.InitializeHollywoodWithDefaultForUnity();
 
         var p = Injector.GetInstance<IBaseModule>(); //
 
