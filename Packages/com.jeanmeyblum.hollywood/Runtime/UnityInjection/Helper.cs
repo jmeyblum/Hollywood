@@ -11,8 +11,6 @@ namespace Hollywood.Runtime.UnityInjection
 		/// </summary>
 		public static void InitializeHollywoodWithDefaultForUnity()
 		{
-			UnityEngine.Debug.Log("Yo" + Injector.InjectionContext);
-
 			Assert.IsNull(Injector.InjectionContext);
 
 			SetupUnitySpecificImplementations();

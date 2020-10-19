@@ -9,6 +9,7 @@ namespace Hollywood.Runtime
 
 	public class DefaultTypeResolver : ITypeResolver
 	{
+		private static readonly Type IIgnoreAttributeType = typeof(IgnoreTypeAttribute);
 		private Dictionary<Type, HashSet<Type>> InterfaceToTypes = new Dictionary<Type, HashSet<Type>>();
 
 		public DefaultTypeResolver()
@@ -53,6 +54,21 @@ namespace Hollywood.Runtime
 			foreach (var type in types)
 			{
 				var interfaces = type.GetInterfaces();
+
+				bool isTypeIgnored = false;
+				foreach (var typeInterfaces in interfaces)
+				{
+					if(typeInterfaces == IIgnoreAttributeType)
+					{
+						isTypeIgnored = true;
+						break;
+					}
+				}
+
+				if(isTypeIgnored)
+				{
+					continue;
+				}
 
 				foreach (var typeInterfaces in interfaces)
 				{
