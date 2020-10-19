@@ -16,8 +16,8 @@ namespace Hollywood.Runtime
 
 		public DefaultInjectionContext(ITypeResolver typeResolver, IInstanceCreator instanceCreator)
 		{
-			Assert.IsNotNull(typeResolver);
-			Assert.IsNotNull(instanceCreator);
+			Assert.IsNotNull(typeResolver, $"{nameof(typeResolver)} is null.");
+			Assert.IsNotNull(instanceCreator, $"{nameof(instanceCreator)} is null.");
 
 			TypeResolver = typeResolver;
 			InstanceCreator = instanceCreator;
@@ -28,29 +28,32 @@ namespace Hollywood.Runtime
 
 		T IInjectionContext.FindDependency<T>(object instance)
 		{
-			Assert.IsNotNull(instance);
-			Assert.IsTrue(Instances.Contains(instance));
-			Assert.IsFalse(instance is IModule);
+			Assert.IsNotNull(instance, $"{nameof(instance)} is null.");
+			Assert.IsTrue(Instances.Contains(instance), $"{instance} is unknown from this {nameof(IInjectionContext)}: {this}.");
+			Assert.IsFalse(instance is IModule, $"{instance} implements {nameof(IModule)} and thus can't have dependencies.");
+			Assert.IsFalse(typeof(T).IsInterface, $"{typeof(T).Name} is not an interface.");
 
 			var parent = Instances.GetParent(instance);
+			var child = instance;
 
 			while (parent != null)
 			{
-				var dependency = FindInnerDependency<T>(parent);
+				var dependency = FindInnerDependency<T>(parent, child);
 				if(dependency != null)
 				{
 					return dependency;
 				}
 
+				child = parent;
 				parent = Instances.GetParent(parent);
 			}
 
-			Assert.Throw($"No {typeof(T)} found.");
+			Assert.Throw($"No dependency of type {typeof(T).Name} found for instance: {instance}.");
 
 			return default;
 		}
 
-		private T FindInnerDependency<T>(object current)
+		private T FindInnerDependency<T>(object current, object childToIgnore = null)
 		{
 			if (typeof(T).IsAssignableFrom(current.GetType()))
 			{
@@ -59,14 +62,17 @@ namespace Hollywood.Runtime
 
 			foreach (var children in Instances.GetChildren(current))
 			{
+				if(children == childToIgnore)
+				{
+					continue;
+				}
+
 				if (typeof(T).IsAssignableFrom(children.GetType()))
 				{
 					return (T)children;
 				}
-
-				var module = children as IModule;
-
-				while (module != null)
+				
+				if (children is IModule module)
 				{
 					foreach (var moduleChildren in Instances.GetChildren(module))
 					{
@@ -102,8 +108,8 @@ namespace Hollywood.Runtime
 
 		void IInjectionContext.DisposeInstance(object instance)
 		{
-			Assert.IsTrue(Instances.Contains(instance));
-			Assert.IsTrue(InstancesData.ContainsKey(instance));
+			Assert.IsNotNull(instance, $"{nameof(instance)} is null.");
+			Assert.IsTrue(Instances.Contains(instance) && InstancesData.ContainsKey(instance), $"{instance} is unknown from this {nameof(IInjectionContext)}: {this}.");
 
 			if (instance is IDisposable disposable)
 			{
@@ -133,8 +139,9 @@ namespace Hollywood.Runtime
 
 		T IAdvancedInjectionContext.AddInstance<T>(object owner)
 		{
-			Assert.IsNotNull(TypeResolver);
-			Assert.IsNotNull(InstanceCreator);
+			Assert.IsNotNull(TypeResolver, $"{nameof(TypeResolver)} is null.");
+			Assert.IsNotNull(InstanceCreator, $"{nameof(InstanceCreator)} is null.");
+			Assert.IsFalse(typeof(T).IsInterface, $"{typeof(T).Name} is not an interface.");
 
 			if (owner != null)
 			{
@@ -149,8 +156,8 @@ namespace Hollywood.Runtime
 
 			var instanceType = TypeResolver.Get<T>();
 
-			Assert.IsNotNull(instanceType);
-			// TODO: assert instance type is valid for T.
+			Assert.IsNotNull(instanceType, $"{nameof(TypeResolver)} resolved to null for type {typeof(T).Name}.");
+			Assert.IsTrue(typeof(T).IsAssignableFrom(instanceType), $"{nameof(TypeResolver)} resolved to an incompatible type ({instanceType.Name}) for type {typeof(T).Name}.");
 
 			var instance = (T)InstanceCreator.Create(instanceType);
 
@@ -162,15 +169,15 @@ namespace Hollywood.Runtime
 
 		IEnumerable<T> IAdvancedInjectionContext.AddInstances<T>(object owner)
 		{
-			Assert.IsNotNull(TypeResolver);
-			Assert.IsNotNull(InstanceCreator);
+			Assert.IsNotNull(TypeResolver, $"{nameof(TypeResolver)} is null.");
+			Assert.IsNotNull(InstanceCreator, $"{nameof(InstanceCreator)} is null.");
 
 			var existingInstances = Instances.GetChildren(owner).Where(child => typeof(T).IsAssignableFrom(child.GetType())).Cast<T>();
 			var instanceTypes = TypeResolver.GetAll<T>();
-			// TODO: assert all those types are valid for T.
 
-			Assert.IsNotNull(instanceTypes);
-			Assert.IsTrue(instanceTypes.Count() > 0);
+			Assert.IsNotNull(instanceTypes, $"{nameof(TypeResolver)} resolved to null for type {typeof(T).Name}.");
+			Assert.IsTrue(instanceTypes.Count() > 0, $"{nameof(TypeResolver)} resolved to 0 types for type {typeof(T).Name}.");
+			Assert.IsTrue(instanceTypes.All(instanceType => typeof(T).IsAssignableFrom(instanceType)), $"{nameof(TypeResolver)} resolved to a some incompatible types for type {typeof(T).Name}.");
 
 			var instanceTypesToCreate = instanceTypes.Except(existingInstances.Select(c => c.GetType()));
 
@@ -190,8 +197,8 @@ namespace Hollywood.Runtime
 
 		void IAdvancedInjectionContext.ResolveInstance(object instance)
 		{
-			Assert.IsTrue(Instances.Contains(instance));
-			Assert.IsTrue(InstancesData.ContainsKey(instance));
+			Assert.IsNotNull(instance, $"{nameof(instance)} is null.");
+			Assert.IsTrue(Instances.Contains(instance) && InstancesData.ContainsKey(instance), $"{instance} is unknown from this {nameof(IInjectionContext)}: {this}.");
 
 			var instanceData = InstancesData[instance];
 
@@ -224,7 +231,7 @@ namespace Hollywood.Runtime
 
 		void IAdvancedInjectionContext.ResolveInstances(IEnumerable instances)
 		{
-			Assert.IsNotNull(instances);
+			Assert.IsNotNull(instances, $"{nameof(instances)} is null.");
 
 			foreach (var instance in instances)
 			{
@@ -234,7 +241,7 @@ namespace Hollywood.Runtime
 
 		void IInternalInjectionContext.ResolveOwnedInstances(object owner)
 		{
-			Assert.IsTrue(Instances.Contains(owner));
+			Assert.IsTrue(Instances.Contains(owner), $"{owner} is unknown from this {nameof(IInjectionContext)}: {this}.");
 
 			foreach (var instance in Instances.GetChildren(owner))
 			{
@@ -244,7 +251,7 @@ namespace Hollywood.Runtime
 
 		void IInternalInjectionContext.DisposeOwnedInstances(object owner)
 		{
-			Assert.IsTrue(Instances.Contains(owner));
+			Assert.IsTrue(Instances.Contains(owner), $"{owner} is unknown from this {nameof(IInjectionContext)}: {this}.");
 
 			while (Instances.GetChildren(owner).Any())
 			{

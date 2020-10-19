@@ -15,7 +15,7 @@ namespace Hollywood.Runtime.Internal
 				Add(parent);
 			}
 
-			Assert.IsTrue(!Contains(element) || GetParent(element) == null);
+			Assert.IsTrue(!Contains(element) || GetParent(element) == null, $"{element} is already parented.");
 
 			ChildToParent[element] = parent ?? element;
 
@@ -33,8 +33,9 @@ namespace Hollywood.Runtime.Internal
 
 		public void Remove(T element, bool recursively = false)
 		{
-			Assert.IsTrue(Contains(element));
-			Assert.IsTrue(!recursively || GetChildren(element).Count() == 0);
+			Assert.IsNotNull(element, $"{nameof(element)} is null.");
+			Assert.IsTrue(Contains(element), $"{element} is unknown from this {nameof(Hierarchy<T>)}: {this}");
+			Assert.IsTrue(!recursively || GetChildren(element).Count() == 0, $"Can't remove {nameof(element)} with children. Set {nameof(recursively)} to true to do so.");
 
 			if (recursively)
 			{
@@ -70,7 +71,7 @@ namespace Hollywood.Runtime.Internal
 
 		public T GetParent(T child)
 		{
-			Assert.IsTrue(Contains(child));
+			Assert.IsTrue(Contains(child), $"{child} is unknown from this {nameof(Hierarchy<T>)}: {this}");
 
 			T parent = ChildToParent[child];
 
@@ -79,7 +80,7 @@ namespace Hollywood.Runtime.Internal
 
 		public bool Contains(T element)
 		{
-			Assert.IsNotNull(element);
+			Assert.IsNotNull(element, $"{nameof(element)} is null.");
 
 			return ChildToParent.ContainsKey(element);
 		}

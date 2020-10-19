@@ -10,8 +10,6 @@ using Mono.Collections.Generic;
 namespace Hollywood.Editor.AssemblyInjection
 {
 	// TODO: support IInjected type when base types are IInjected: __ResolveDependencies must be marked as override instead of virtual and not call Hollywood.Runtime.Injector.ResolveOwnedInstances(this); but base.__ResolveDependencies().
-	// TODO: add settings to have a list of ignored assemblies
-
 	// TODO: validate that IInjected and IOwner is not used by user
 
 	public class AssemblyInjector
