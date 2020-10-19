@@ -3,9 +3,6 @@ using Hollywood.Runtime;
 using Hollywood.Runtime.Internal;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
-using System.Runtime.CompilerServices;
-using UnityEngine;
 
 public class Patate
 {
@@ -29,12 +26,48 @@ public static class TestS
 
         Injector.InjectionContext = defaultInjectionContext;
 
-        var p = Injector.GetInstance<IParent>(); //
+        var p = Injector.GetInstance<IBaseModule>(); //
 
-        var t = Injector.GetInstance<ITestController>();
+        //var t = Injector.GetInstance<ITestController>();
 
         Injector.DisposeInstance(p);
 	}
+}
+
+public interface ITestModule : IModule
+{ }
+
+[Owns(typeof(IParent))]
+[Owns(typeof(ITestController))]
+public class TestModule : ITestModule
+{
+
+}
+
+public interface IBaseModule : IModule
+{ }
+
+[Owns(typeof(ITestModule))]
+[Owns(typeof(IOtherSystem))]
+public class BaseModule : IBaseModule
+{
+
+}
+
+public interface IOtherSystem
+{ }
+
+[Owns(typeof(ISubOtherSystem))]
+public class OtherSystem : IOtherSystem
+{ }
+
+public interface ISubOtherSystem
+{ }
+
+public class SubOtherSystem : ISubOtherSystem
+{
+    [Needs]
+    ITestController TestController;
 }
 
 public interface IParent

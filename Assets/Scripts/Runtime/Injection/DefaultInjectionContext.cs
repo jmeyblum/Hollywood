@@ -26,31 +26,58 @@ namespace Hollywood.Runtime
 		public DefaultInjectionContext()
 		{ }
 
-		T IInjectionContext.FindDependency<T>(object injected)
+		T IInjectionContext.FindDependency<T>(object instance)
 		{
-			Assert.IsTrue(Instances.Contains(injected));
+			Assert.IsNotNull(instance);
+			Assert.IsTrue(Instances.Contains(instance));
+			Assert.IsFalse(instance is IModule);
 
-			var parent = Instances.GetParent(injected);
+			var parent = Instances.GetParent(instance);
 
 			while (parent != null)
 			{
-				if (typeof(T).IsAssignableFrom(parent.GetType()))
+				var dependency = FindInnerDependency<T>(parent);
+				if(dependency != null)
 				{
-					return (T)parent;
-				}
-
-				foreach (var children in Instances.GetChildren(parent))
-				{
-					if (typeof(T).IsAssignableFrom(children.GetType()))
-					{
-						return (T)children;
-					}
+					return dependency;
 				}
 
 				parent = Instances.GetParent(parent);
 			}
 
 			Assert.Throw($"No {typeof(T)} found.");
+
+			return default;
+		}
+
+		private T FindInnerDependency<T>(object current)
+		{
+			if (typeof(T).IsAssignableFrom(current.GetType()))
+			{
+				return (T)current;
+			}
+
+			foreach (var children in Instances.GetChildren(current))
+			{
+				if (typeof(T).IsAssignableFrom(children.GetType()))
+				{
+					return (T)children;
+				}
+
+				var module = children as IModule;
+
+				while (module != null)
+				{
+					foreach (var moduleChildren in Instances.GetChildren(module))
+					{
+						var dependency = FindInnerDependency<T>(moduleChildren);
+						if (dependency != null)
+						{
+							return dependency;
+						}
+					}
+				}
+			}
 
 			return default;
 		}

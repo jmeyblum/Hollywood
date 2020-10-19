@@ -19,13 +19,13 @@ namespace Hollywood.Runtime
 		/// The dependency will be search in the owner ancestors of the object looking for it.
 		/// </summary>
 		/// <typeparam name="T">Type of the dependency.</typeparam>
-		/// <param name="injected">The object looking for a dependency.</param>
+		/// <param name="instance">The object looking for a dependency.</param>
 		/// <returns></returns>
-		public static T FindDependency<T>(object injected)
+		public static T FindDependency<T>(object instance) where T : class
 		{
 			Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
 
-			return InjectionContext.FindDependency<T>(injected);
+			return InjectionContext.FindDependency<T>(instance);
 		}
 
 		/// <summary>
@@ -38,7 +38,7 @@ namespace Hollywood.Runtime
 		/// <param name="context"></param>
 		/// <param name="owner"></param>
 		/// <returns></returns>
-		public static T GetInstance<T>(object owner = null)
+		public static T GetInstance<T>(object owner = null) where T : class
 		{
 			Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
 
@@ -55,7 +55,7 @@ namespace Hollywood.Runtime
 		/// <param name="context"></param>
 		/// <param name="owner"></param>
 		/// <returns></returns>
-		public static IEnumerable<T> GetInstances<T>(object owner = null)
+		public static IEnumerable<T> GetInstances<T>(object owner = null) where T : class
 		{
 			Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
 
@@ -92,7 +92,7 @@ namespace Hollywood.Runtime
 			/// <param name="owner"></param>
 			/// <param name="context"></param>
 			/// <returns></returns>
-			public static T AddInstance<T>(object owner)
+			public static T AddInstance<T>(object owner) where T : class
 			{
 				Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
 
@@ -108,7 +108,7 @@ namespace Hollywood.Runtime
 			/// <param name="owner"></param>
 			/// <param name="context"></param>
 			/// <returns></returns>
-			public static IEnumerable<T> AddInstances<T>(object owner)
+			public static IEnumerable<T> AddInstances<T>(object owner) where T : class
 			{
 				Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
 
