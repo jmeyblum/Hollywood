@@ -1,5 +1,11 @@
 {
   "dependencies": {
+    "com.jeanmeyblum.hollywood": {
+      "version": "file:com.jeanmeyblum.hollywood",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
     "com.unity.burst": {
       "version": "1.3.5",
       "depth": 0,
