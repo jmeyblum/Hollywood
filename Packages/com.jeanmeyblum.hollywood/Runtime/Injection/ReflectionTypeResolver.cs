@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Hollywood.Runtime.Internal;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -16,13 +17,13 @@ namespace Hollywood.Runtime
 
 			foreach (var assembly in assemblies)
 			{
-				var injectedInterfacesTypeName = $"__Hollywood.{assembly.Modules.First().Name}.__InjectedInterfaces";
+				var injectedInterfacesTypeName = string.Format(Constants.ReflectionTypeResolver.TypeNameTemplate, assembly.Modules.First().Name);
 
 				var injectedInterfacesType = assembly.GetType(injectedInterfacesTypeName, throwOnError: false);
 
 				if (injectedInterfacesType != null)
 				{
-					var interfaceNamesField = injectedInterfacesType.GetField("__interfaceNames", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+					var interfaceNamesField = injectedInterfacesType.GetField(Constants.ReflectionTypeResolver.MemberName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
 
 					var interfaceNames = (string[])interfaceNamesField.GetValue(null);
 

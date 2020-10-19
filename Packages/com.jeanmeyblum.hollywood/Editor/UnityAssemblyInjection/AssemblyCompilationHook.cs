@@ -1,5 +1,6 @@
 ﻿using Hollywood.Editor.AssemblyInjection;
 using Mono.Cecil;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.Compilation;
@@ -8,11 +9,33 @@ namespace Hollywood.Editor.UnityAssemblyInjection
 {
 	internal static class AssemblyCompilationHook
 	{
+		private const string AssemblyInjectedOnceSessionKey = "Hollywood_Assembly_Injected_Once";
+
 		[InitializeOnLoadMethod]
 		public static void OnInitializeOnLoad()
 		{
 			CompilationPipeline.assemblyCompilationFinished -= OnCompilationFinished;
 			CompilationPipeline.assemblyCompilationFinished += OnCompilationFinished;
+
+			TryInjectAllAssembliesOnce();
+		}
+
+		private static void TryInjectAllAssembliesOnce()
+		{
+			if (!SessionState.GetBool(AssemblyInjectedOnceSessionKey, false))
+			{
+				SessionState.SetBool(AssemblyInjectedOnceSessionKey, true);
+
+				foreach (var assembly in CompilationPipeline.GetAssemblies())
+				{
+					if (File.Exists(assembly.outputPath))
+					{
+						InjectAssemblyIfIncluded(assembly.outputPath);
+					}
+				}
+
+				EditorUtility.RequestScriptReload();
+			}
 		}
 
 		private static void OnCompilationFinished(string assemblyPath, CompilerMessage[] compilerMessages)
@@ -22,6 +45,11 @@ namespace Hollywood.Editor.UnityAssemblyInjection
 				return;
 			}
 
+			InjectAssemblyIfIncluded(assemblyPath);
+		}
+
+		private static void InjectAssemblyIfIncluded(string assemblyPath)
+		{
 			if (!IsIncluded(assemblyPath))
 			{
 				return;

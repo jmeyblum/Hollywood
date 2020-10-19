@@ -160,7 +160,7 @@ namespace Hollywood.Editor.AssemblyInjection
 			{
 				++instructionInsertionIndex;
 
-				if (instruction.OpCode == OpCodes.Call && instruction.Operand is MethodReference method && method.Name == ".ctor")
+				if (instruction.OpCode == OpCodes.Call && instruction.Operand is MethodReference method && method.Name == Constants.InstanceInitializerMethodName)
 				{
 					break;
 				}
@@ -176,7 +176,7 @@ namespace Hollywood.Editor.AssemblyInjection
 			bool newConstructor = constructor == null;
 			if (newConstructor)
 			{
-				constructor = new MethodDefinition(".ctor",
+				constructor = new MethodDefinition(Constants.InstanceInitializerMethodName,
 					MethodAttributes.Private |
 					MethodAttributes.HideBySig |
 					MethodAttributes.SpecialName |
@@ -195,7 +195,7 @@ namespace Hollywood.Editor.AssemblyInjection
 						{
 							lastStfldIndex = instructionIndex;
 						}
-						else if (instruction.OpCode == OpCodes.Call && instruction.Operand is MethodReference method && method.Name == ".ctor")
+						else if (instruction.OpCode == OpCodes.Call && instruction.Operand is MethodReference method && method.Name == Constants.InstanceInitializerMethodName)
 						{
 							break;
 						}
@@ -218,7 +218,7 @@ namespace Hollywood.Editor.AssemblyInjection
 				}
 
 				var baseType = AssemblyDefinition.MainModule.ImportReference(injectableType.Type.BaseType);
-				var baseConstructor = new MethodReference(".ctor", VoidType, baseType);
+				var baseConstructor = new MethodReference(Constants.InstanceInitializerMethodName, VoidType, baseType);
 				baseConstructor.HasThis = true;
 
 				baseConstructor = AssemblyDefinition.MainModule.ImportReference(baseConstructor);
@@ -320,16 +320,16 @@ namespace Hollywood.Editor.AssemblyInjection
 
 			Result = InjectionResult.Modified;
 
-			var injectedInterfacesType = new TypeDefinition($"__Hollywood.{AssemblyDefinition.MainModule.Name}", "__InjectedInterfaces", TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit);
+			var injectedInterfacesType = new TypeDefinition(string.Format(Constants.ReflectionTypeResolver.AssemblyNameTemplate, AssemblyDefinition.MainModule.Name), Constants.ReflectionTypeResolver.TypeName, TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit);
 			injectedInterfacesType.BaseType = ObjectType;
-			var injectedInterfacesConstructor = new MethodDefinition(".cctor", MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.Static | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName, VoidType);
-			var interfaceNamesMember = new FieldDefinition("__interfaceNames", FieldAttributes.Public | FieldAttributes.Static, StringArrayType);
+			var injectedInterfacesConstructor = new MethodDefinition(Constants.TypeInitializerMethodName, MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.Static | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName, VoidType);
+			var interfaceNamesMember = new FieldDefinition(Constants.ReflectionTypeResolver.MemberName, FieldAttributes.Public | FieldAttributes.Static, StringArrayType);
 			injectedInterfacesType.Methods.Add(injectedInterfacesConstructor);
 			injectedInterfacesType.Fields.Add(interfaceNamesMember);
 
 			AssemblyDefinition.MainModule.Types.Add(injectedInterfacesType);
 
-			var injectedInterfaceNames = injectedInterfaces.Select(i => i.ToString());
+			var injectedInterfaceNames = injectedInterfaces.Select(i => i.ToString()).OrderBy(s => s);
 			var instructions = injectedInterfacesConstructor.Body.Instructions;
 
 			AddNewStringArrayInstructions(injectedInterfaceNames, instructions);
