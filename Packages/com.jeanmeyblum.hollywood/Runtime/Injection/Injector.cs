@@ -5,6 +5,14 @@ namespace Hollywood.Runtime
 {
 	// TODO: Test performance of reflection calls
 	// TODO: Add callbacks for system events (dependency types not found...)
+	// TODO: Needs All
+	// TODO: Named instances
+	// TODO: Supports GameObject?
+	// TODO: Parenting of existing external instance
+	// TODO: Instances tree visualization
+	// TODO: supports concrete type
+	// TODO: injectionContext should set himself as the current static one when used (to support editor scenario)
+	// TODO: add more logging 
 
 	public static class Injector
 	{
