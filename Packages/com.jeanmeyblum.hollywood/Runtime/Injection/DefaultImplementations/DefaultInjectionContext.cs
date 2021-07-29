@@ -200,7 +200,7 @@ namespace Hollywood.Runtime
 				return;
 			}
 
-			if (instance is IInjected injected)
+			if (instance is __Hollywood_Injected injected)
 			{
 				injected.__Resolve();
 			}

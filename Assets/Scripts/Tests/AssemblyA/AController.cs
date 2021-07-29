@@ -142,12 +142,12 @@ public interface IInjectedParent
     void Resolve();
 }
 
-public class TestControllerParentManual : IInjected, IInjectedParent
+public class TestControllerParentManual : __Hollywood_Injected, IInjectedParent
 {
     //[Needs]
     ISubOtherSystem _subOtherSystem;
 
-	void IInjected.__Resolve()
+	void __Hollywood_Injected.__Resolve()
 	{
         //_subOtherSystem = Hollywood.Runtime.Injector.FindDependency<ISubOtherSystem>(this);
 
@@ -163,10 +163,10 @@ public class TestControllerParentManual : IInjected, IInjectedParent
 
 	void IInjectedParent.Resolve()
 	{
-        ((IInjected)this).__Resolve();
+        ((__Hollywood_Injected)this).__Resolve();
 	}
 
-    protected void A_IInjected_Resolve_() // >IInjected<>Resolve<
+    protected void A_IInjected_Resolve_() // >__Hollywood_Injected<>Resolve<
     {
         _subOtherSystem = Hollywood.Runtime.Injector.FindDependency<ISubOtherSystem>(this);
 
@@ -177,7 +177,7 @@ public class TestControllerParentManual : IInjected, IInjectedParent
 
 
 //[Owns(typeof(IBInterface2))]
-public class TestControllerManual : TestControllerParentManual, IInjected
+public class TestControllerManual : TestControllerParentManual, __Hollywood_Injected
 {
     //[Needs]
     IBInterface _myB;
@@ -188,13 +188,13 @@ public class TestControllerManual : TestControllerParentManual, IInjected
         Hollywood.Runtime.Injector.Advanced.AddInstance<IBInterface2>(this);
 	}
 
-	void IInjected.__Resolve()
+	void __Hollywood_Injected.__Resolve()
 	{
         B_IInjected_Resolve_();
         //Hollywood.Runtime.Injector.Internal.ResolveOwnedInstances(this);
     }
 
-    protected void B_IInjected_Resolve_() // >IInjected<>Resolve<
+    protected void B_IInjected_Resolve_() // >__Hollywood_Injected<>Resolve<
     {
         _myB = Hollywood.Runtime.Injector.FindDependency<IBInterface>(this);
         _myB1 = Hollywood.Runtime.Injector.FindDependency<IBInterface2>(this);

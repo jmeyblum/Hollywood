@@ -20,7 +20,7 @@ public interface ITestCModule
 {
 
 }
-
+ 
 [Owns(typeof(ISomethingForC))]
 [Owns(typeof(ISomethingForA))]
 [Owns(typeof(IC))]
@@ -57,12 +57,12 @@ public class C : B, IC
 }
 
 //[InheritsFromInjectable(typeof(A))] 
-//public class C : B, IInjected
+//public class C : B, __Hollywood_Injected
 //{
 //	//[Needs]
 //	ISomethingForC _somethingForC;
 
-//	void IInjected.__Resolve()
+//	void __Hollywood_Injected.__Resolve()
 //	{
 //		___Resolve___();
 //	}

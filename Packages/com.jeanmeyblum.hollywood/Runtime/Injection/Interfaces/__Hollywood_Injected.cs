@@ -3,7 +3,7 @@
 namespace Hollywood.Runtime.Internal
 {
 	[EditorBrowsable(EditorBrowsableState.Never)]
-	public interface IInjected
+	public interface __Hollywood_Injected
 	{
 		void __Resolve();
 	}

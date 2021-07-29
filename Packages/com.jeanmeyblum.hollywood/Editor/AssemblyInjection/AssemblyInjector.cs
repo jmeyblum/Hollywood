@@ -9,8 +9,7 @@ using Mono.Collections.Generic;
 
 namespace Hollywood.Editor.AssemblyInjection
 {
-	// TODO: support IInjected type when base types are IInjected: __ResolveDependencies must be marked as override instead of virtual and not call Hollywood.Runtime.Injector.ResolveOwnedInstances(this); but base.__ResolveDependencies().
-	// TODO: validate that IInjected and IOwner is not used by user
+	// TODO: validate that __Hollywood_Injected and IOwner is not used by user
 
 	public class AssemblyInjector
 	{
@@ -20,7 +19,7 @@ namespace Hollywood.Editor.AssemblyInjection
 		internal static readonly Type NeedsAttributeType = typeof(NeedsAttribute);
 		internal static readonly Type InheritsFromInjectableAttributeType = typeof(InheritsFromInjectableAttribute);
 
-		private static readonly Type IInjectedType = typeof(IInjected);
+		private static readonly Type HollywoodInjectedType = typeof(__Hollywood_Injected);
 
 		private const System.Reflection.BindingFlags StaticBindingFlags = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
 		private const System.Reflection.BindingFlags InstanceBindingFlags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
@@ -39,7 +38,7 @@ namespace Hollywood.Editor.AssemblyInjection
 		private readonly MethodReference InjectorAddInstanceMethodReference;
 		private readonly MethodReference InjectorAddInstancesMethodReference;
 
-		private readonly InterfaceImplementation IInjectedTypeImplementation;
+		private readonly InterfaceImplementation HollywoodInjectedTypeImplementation;
 		private readonly MethodReference ResolveInterfaceMethod;
 
 		private readonly MethodReference FindDependencyGenericMethodReference;
@@ -60,8 +59,8 @@ namespace Hollywood.Editor.AssemblyInjection
 			InjectorAddInstancesMethodReference = AssemblyDefinition.MainModule.ImportReference(InjectorAddInstancesMethod);
 
 			// For Injected
-			IInjectedTypeImplementation = new InterfaceImplementation(AssemblyDefinition.MainModule.ImportReference(IInjectedType));
-			ResolveInterfaceMethod = AssemblyDefinition.MainModule.ImportReference(typeof(IInjected).GetMethod(nameof(IInjected.__Resolve), InstanceBindingFlags));
+			HollywoodInjectedTypeImplementation = new InterfaceImplementation(AssemblyDefinition.MainModule.ImportReference(HollywoodInjectedType));
+			ResolveInterfaceMethod = AssemblyDefinition.MainModule.ImportReference(typeof(__Hollywood_Injected).GetMethod(nameof(__Hollywood_Injected.__Resolve), InstanceBindingFlags));
 			FindDependencyGenericMethodReference = AssemblyDefinition.MainModule.ImportReference(FindDependencyMethod);
 
 			StringType = AssemblyDefinition.MainModule.ImportReference(typeof(string));
@@ -69,7 +68,7 @@ namespace Hollywood.Editor.AssemblyInjection
 			VoidType = AssemblyDefinition.MainModule.ImportReference(typeof(void));
 			ObjectType = AssemblyDefinition.MainModule.ImportReference(typeof(System.Object));
 
-			ResolveProtectedMethodName = $"<>{IInjectedType.Name}<>{ResolveInterfaceMethod.Name}<>";
+			ResolveProtectedMethodName = $"<>{HollywoodInjectedType.Name}<>{ResolveInterfaceMethod.Name}<>";
 
 			Inject();
 		}
@@ -114,7 +113,7 @@ namespace Hollywood.Editor.AssemblyInjection
 				InjectIOwner(injectableType);
 			}
 
-			InjectIInjected(injectableType, isOwner);
+			InjectHollywoodInjected(injectableType, isOwner);
 		}
 
 		private void InjectIOwner(InjectableType injectableType)
@@ -225,9 +224,9 @@ namespace Hollywood.Editor.AssemblyInjection
 			return constructor;
 		}
 
-		private void InjectIInjected(InjectableType injectableType, bool isOwner)
+		private void InjectHollywoodInjected(InjectableType injectableType, bool isOwner)
 		{
-			injectableType.Type.Interfaces.Add(IInjectedTypeImplementation);
+			injectableType.Type.Interfaces.Add(HollywoodInjectedTypeImplementation);
 
 			AddResolveMethod(injectableType, isOwner);
 		}
@@ -236,7 +235,7 @@ namespace Hollywood.Editor.AssemblyInjection
 		{
 			MethodDefinition resolveProtectedMethod = AddResolveProtectedMethod(injectableType);
 
-			AddIInjectedResolveMethod(injectableType, resolveProtectedMethod);
+			AddHollywoodInjectedResolveMethod(injectableType, resolveProtectedMethod);
 		}
 
 		private MethodDefinition AddResolveProtectedMethod(InjectableType injectableType)
@@ -276,7 +275,7 @@ namespace Hollywood.Editor.AssemblyInjection
 			return resolveProtectedMethod;
 		}
 
-		private void AddIInjectedResolveMethod(InjectableType injectableType, MethodDefinition resolveProtectedMethod)
+		private void AddHollywoodInjectedResolveMethod(InjectableType injectableType, MethodDefinition resolveProtectedMethod)
 		{
 			MethodDefinition resolveMethod = new MethodDefinition($"{ResolveInterfaceMethod.DeclaringType}.{ResolveInterfaceMethod.Name}",
 				MethodAttributes.Private |

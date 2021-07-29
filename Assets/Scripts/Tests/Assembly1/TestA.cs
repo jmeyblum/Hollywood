@@ -7,7 +7,7 @@ public interface ISomethingForA
 }
 
 public class SomethingForA : ISomethingForA
-{
+{ 
 
 }
 
@@ -26,13 +26,13 @@ public class A
 }
 
 ////[Owns(typeof(ISomethingOwnedByA))]
-//public class A : IInjected
+//public class A : __Hollywood_Injected
 //{
 
 //	//[Needs]
 //	ISomethingForA _somethingForA;
 
-//	void IInjected.__Resolve()
+//	void __Hollywood_Injected.__Resolve()
 //	{
 //		___Resolve___();
 //	}
