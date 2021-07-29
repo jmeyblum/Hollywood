@@ -2,6 +2,7 @@
 using Hollywood.Runtime;
 using Hollywood.Runtime.Internal;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 public class Patate
@@ -27,11 +28,11 @@ public static class TestS
         var p = Injector.GetInstance<IBaseModule>(); //
 
         //var t = Injector.GetInstance<ITestController>();
-
+         
         Injector.DisposeInstance(p);
 	}
 }
-
+ 
 public interface ITestModule : IModule
 { }
 
@@ -46,7 +47,7 @@ public interface IBaseModule : IModule
 { }
 
 [Owns(typeof(ITestModule))]
-[Owns(typeof(IOtherSystem))]
+[Owns(typeof(IOtherSystem))] 
 public class BaseModule : IBaseModule
 {
 
@@ -64,7 +65,7 @@ public interface ISubOtherSystem
 
 public class SubOtherSystem : ISubOtherSystem
 {
-    [Needs]
+    [Needs] 
     ITestController TestController;
 }
 
@@ -136,8 +137,47 @@ public class TestController : ParentAController, ITestController
 	}*/
 }
 
+public interface IInjectedParent
+{
+    void Resolve();
+}
+
+public class TestControllerParentManual : IInjected, IInjectedParent
+{
+    //[Needs]
+    ISubOtherSystem _subOtherSystem;
+
+	void IInjected.__Resolve()
+	{
+        //_subOtherSystem = Hollywood.Runtime.Injector.FindDependency<ISubOtherSystem>(this);
+
+        //Hollywood.Runtime.Injector.Internal.ResolveOwnedInstances(this);
+         
+        A_IInjected_Resolve_();
+    }
+     
+    protected virtual void YoYo()
+	{
+
+	}
+
+	void IInjectedParent.Resolve()
+	{
+        ((IInjected)this).__Resolve();
+	}
+
+    protected void A_IInjected_Resolve_() // >IInjected<>Resolve<
+    {
+        _subOtherSystem = Hollywood.Runtime.Injector.FindDependency<ISubOtherSystem>(this);
+
+        Hollywood.Runtime.Injector.Internal.ResolveOwnedInstances(this);
+    }
+}
+
+
+
 //[Owns(typeof(IBInterface2))]
-public class TestControllerManual : IInjected
+public class TestControllerManual : TestControllerParentManual, IInjected
 {
     //[Needs]
     IBInterface _myB;
@@ -148,16 +188,17 @@ public class TestControllerManual : IInjected
         Hollywood.Runtime.Injector.Advanced.AddInstance<IBInterface2>(this);
 	}
 
-	void IInjected.__Dispose()
-	{
-        Hollywood.Runtime.Injector.DisposeInstance(this);
-	}
-
 	void IInjected.__Resolve()
 	{
+        B_IInjected_Resolve_();
+        //Hollywood.Runtime.Injector.Internal.ResolveOwnedInstances(this);
+    }
+
+    protected void B_IInjected_Resolve_() // >IInjected<>Resolve<
+    {
         _myB = Hollywood.Runtime.Injector.FindDependency<IBInterface>(this);
         _myB1 = Hollywood.Runtime.Injector.FindDependency<IBInterface2>(this);
 
-        Hollywood.Runtime.Injector.Internal.ResolveOwnedInstances(this);
+        A_IInjected_Resolve_();
     }
 }

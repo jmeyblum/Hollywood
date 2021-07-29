@@ -1,5 +1,6 @@
 ﻿using Hollywood.Editor.AssemblyInjection;
 using Mono.Cecil;
+using Mono.Cecil.Pdb;
 using System.IO;
 using System.Linq;
 using UnityEditor;
@@ -74,13 +75,13 @@ namespace Hollywood.Editor.UnityAssemblyInjection
 
 		public static void Inject(string assemblyPath)
 		{
-			using (var assemblyDefinition = AssemblyDefinition.ReadAssembly(assemblyPath, new ReaderParameters(ReadingMode.Immediate) { ReadSymbols = true, ReadWrite = true, AssemblyResolver = new DefaultAssemblyResolver() }))
+			using (var assemblyDefinition = AssemblyDefinition.ReadAssembly(assemblyPath, new ReaderParameters(ReadingMode.Immediate) { ReadSymbols = true, ReadWrite = true, AssemblyResolver = new DefaultAssemblyResolver(), SymbolReaderProvider = new PdbReaderProvider() }))
 			{
 				var injectionResult = AssemblyInjector.Inject(assemblyDefinition);
 
 				if (injectionResult == InjectionResult.Modified)
 				{
-					assemblyDefinition.Write(new WriterParameters { WriteSymbols = true });
+					assemblyDefinition.Write(assemblyPath, new WriterParameters { WriteSymbols = true, SymbolWriterProvider = new PdbWriterProvider() });
 				}
 			}
 		}

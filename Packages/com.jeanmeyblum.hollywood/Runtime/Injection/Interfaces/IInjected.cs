@@ -6,6 +6,5 @@ namespace Hollywood.Runtime.Internal
 	public interface IInjected
 	{
 		void __Resolve();
-		void __Dispose();
 	}
 }

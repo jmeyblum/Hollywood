@@ -12,6 +12,8 @@ namespace Hollywood.Editor.AssemblyInjection
 		public HashSet<TypeReference> ownedAllInterfaceType = new HashSet<TypeReference>();
 		public Dictionary<FieldDefinition, TypeReference> neededInterfaceType = new Dictionary<FieldDefinition, TypeReference>();
 
+		public TypeReference InjectableBaseType;
+
 		public InjectableType(TypeDefinition type)
 		{
 			Type = type;

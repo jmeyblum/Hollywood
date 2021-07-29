@@ -18,6 +18,7 @@ namespace Hollywood.Editor.AssemblyInjection
 		internal static readonly Type OwnsAttributeType = typeof(OwnsAttribute);
 		internal static readonly Type OwnsAllAttributeType = typeof(OwnsAllAttribute);
 		internal static readonly Type NeedsAttributeType = typeof(NeedsAttribute);
+		internal static readonly Type InheritsFromInjectableAttributeType = typeof(InheritsFromInjectableAttribute);
 
 		private static readonly Type IInjectedType = typeof(IInjected);
 
@@ -32,18 +33,16 @@ namespace Hollywood.Editor.AssemblyInjection
 		private static readonly System.Reflection.MethodInfo ResolveOwnedInstancesMethod = typeof(Injector.Internal).GetMethod(nameof(Injector.Internal.ResolveOwnedInstances), StaticBindingFlags);
 		private static readonly System.Reflection.MethodInfo DisposeOwnedInstancesMethod = typeof(Injector.Internal).GetMethod(nameof(Injector.Internal.DisposeOwnedInstances), StaticBindingFlags);
 
+		private readonly string ResolveProtectedMethodName;
+
 		private readonly AssemblyDefinition AssemblyDefinition;
 		private readonly MethodReference InjectorAddInstanceMethodReference;
 		private readonly MethodReference InjectorAddInstancesMethodReference;
 
 		private readonly InterfaceImplementation IInjectedTypeImplementation;
 		private readonly MethodReference ResolveInterfaceMethod;
-		private readonly MethodReference DiposeInterfaceMethod;
 
 		private readonly MethodReference FindDependencyGenericMethodReference;
-
-		private readonly MethodReference ResolveOwnedInstancesMethodReference;
-		private readonly MethodReference DisposeOwnedInstancesMethodReference;
 
 		private readonly TypeReference StringType;
 		private readonly TypeReference StringArrayType;
@@ -63,17 +62,14 @@ namespace Hollywood.Editor.AssemblyInjection
 			// For Injected
 			IInjectedTypeImplementation = new InterfaceImplementation(AssemblyDefinition.MainModule.ImportReference(IInjectedType));
 			ResolveInterfaceMethod = AssemblyDefinition.MainModule.ImportReference(typeof(IInjected).GetMethod(nameof(IInjected.__Resolve), InstanceBindingFlags));
-			DiposeInterfaceMethod = AssemblyDefinition.MainModule.ImportReference(typeof(IInjected).GetMethod(nameof(IInjected.__Dispose), InstanceBindingFlags));
 			FindDependencyGenericMethodReference = AssemblyDefinition.MainModule.ImportReference(FindDependencyMethod);
-			DisposeOwnedInstancesMethodReference = AssemblyDefinition.MainModule.ImportReference(DisposeOwnedInstancesMethod);
-
-			// For Injected Owner
-			ResolveOwnedInstancesMethodReference = AssemblyDefinition.MainModule.ImportReference(ResolveOwnedInstancesMethod);
 
 			StringType = AssemblyDefinition.MainModule.ImportReference(typeof(string));
 			StringArrayType = AssemblyDefinition.MainModule.ImportReference(typeof(string[]));
 			VoidType = AssemblyDefinition.MainModule.ImportReference(typeof(void));
 			ObjectType = AssemblyDefinition.MainModule.ImportReference(typeof(System.Object));
+
+			ResolveProtectedMethodName = $"<>{IInjectedType.Name}<>{ResolveInterfaceMethod.Name}<>";
 
 			Inject();
 		}
@@ -234,33 +230,53 @@ namespace Hollywood.Editor.AssemblyInjection
 			injectableType.Type.Interfaces.Add(IInjectedTypeImplementation);
 
 			AddResolveMethod(injectableType, isOwner);
-			AddDisposeMethod(injectableType, isOwner);
-		}
-
-		private void AddDisposeMethod(InjectableType injectableType, bool isOwner)
-		{
-			MethodDefinition resolveMethod = new MethodDefinition($"{DiposeInterfaceMethod.DeclaringType}.{DiposeInterfaceMethod.Name}",
-				MethodAttributes.Private |
-				MethodAttributes.Final |
-				MethodAttributes.HideBySig |
-				MethodAttributes.Virtual |
-				MethodAttributes.NewSlot,
-				VoidType);
-
-			resolveMethod.Overrides.Add(DiposeInterfaceMethod);
-
-			resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Nop));
-
-			resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
-			resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Call, DisposeOwnedInstancesMethodReference));
-			resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Nop));
-
-			resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
-
-			injectableType.Type.Methods.Add(resolveMethod);
 		}
 
 		private void AddResolveMethod(InjectableType injectableType, bool isOwner)
+		{
+			MethodDefinition resolveProtectedMethod = AddResolveProtectedMethod(injectableType);
+
+			AddIInjectedResolveMethod(injectableType, resolveProtectedMethod);
+		}
+
+		private MethodDefinition AddResolveProtectedMethod(InjectableType injectableType)
+		{
+			MethodDefinition resolveProtectedMethod = new MethodDefinition(
+				ResolveProtectedMethodName,
+				MethodAttributes.Family |
+				MethodAttributes.HideBySig |
+				MethodAttributes.Virtual,
+				VoidType);
+
+			resolveProtectedMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Nop));
+
+			AddFindDependenciesInstructions(injectableType, resolveProtectedMethod);
+
+			if (injectableType.InjectableBaseType != null)
+			{
+				MethodReference baseResolveProtectedMethod = new MethodReference(
+					ResolveProtectedMethodName,
+					VoidType,
+					injectableType.InjectableBaseType);
+
+				baseResolveProtectedMethod.HasThis = true;
+
+				resolveProtectedMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
+				resolveProtectedMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Call, baseResolveProtectedMethod));
+				resolveProtectedMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Nop));
+			}
+			else
+			{
+				resolveProtectedMethod.Attributes |= MethodAttributes.NewSlot;
+			}
+
+			resolveProtectedMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
+
+			injectableType.Type.Methods.Add(resolveProtectedMethod);
+			return resolveProtectedMethod;
+		}
+
+		private void AddIInjectedResolveMethod(InjectableType injectableType, MethodDefinition resolveProtectedMethod)
 		{
 			MethodDefinition resolveMethod = new MethodDefinition($"{ResolveInterfaceMethod.DeclaringType}.{ResolveInterfaceMethod.Name}",
 				MethodAttributes.Private |
@@ -274,24 +290,13 @@ namespace Hollywood.Editor.AssemblyInjection
 
 			resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Nop));
 
-			AddFindDependenciesInstructions(injectableType, resolveMethod);
-
-			if (isOwner)
-			{
-				AddInjectedOwnerInstructions(resolveMethod);
-			}
+			resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
+			resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Call, resolveProtectedMethod));
+			resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Nop));
 
 			resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
 
 			injectableType.Type.Methods.Add(resolveMethod);
-		}
-
-		private void AddInjectedOwnerInstructions(MethodDefinition resolveMethod)
-		{
-			resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
-
-			resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Call, ResolveOwnedInstancesMethodReference));
-			resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Nop));
 		}
 
 		private void AddFindDependenciesInstructions(InjectableType injectableType, MethodDefinition resolveMethod)

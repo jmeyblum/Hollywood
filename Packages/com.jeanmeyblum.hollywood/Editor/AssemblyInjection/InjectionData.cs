@@ -104,6 +104,21 @@ namespace Hollywood.Editor.AssemblyInjection
 				}
 			}
 
+			foreach (var injectableType in injectableTypes)
+			{
+				var hasBaseInjectableType = injectableTypes.Any(i => i.Type.FullName == injectableType.Type.BaseType.FullName);
+
+				if (hasBaseInjectableType)
+				{
+					injectableType.InjectableBaseType = injectableType.Type.BaseType;
+				} else if (injectableType.Type.CustomAttributes.Where(attribute => attribute.AttributeType.FullName == AssemblyInjector.InheritsFromInjectableAttributeType.FullName).FirstOrDefault() is CustomAttribute inheritsFromInjectableAttribute)
+				{
+					var baseType = inheritsFromInjectableAttribute.ConstructorArguments.FirstOrDefault().Value as TypeReference ?? injectableType.Type.BaseType;
+
+					injectableType.InjectableBaseType = baseType;
+				}
+			}
+
 			InjectableTypes = injectableTypes;
 			InjectedInterfaces = injectedInterfaces;
 		}

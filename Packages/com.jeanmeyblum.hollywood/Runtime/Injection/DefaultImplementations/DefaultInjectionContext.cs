@@ -116,14 +116,7 @@ namespace Hollywood.Runtime
 				disposable.Dispose();
 			}
 
-			if (instance is IInjected injected)
-			{
-				injected.__Dispose();
-			}
-			else
-			{
-				((IInternalInjectionContext)this).DisposeOwnedInstances(instance);
-			}
+			((IInternalInjectionContext)this).DisposeOwnedInstances(instance);			
 
 			Instances.Remove(instance, recursively: false);
 			InstancesData.Remove(instance);
@@ -211,11 +204,9 @@ namespace Hollywood.Runtime
 			{
 				injected.__Resolve();
 			}
-			else
-			{
-				((IInternalInjectionContext)this).ResolveOwnedInstances(instance);
-			}
 
+			((IInternalInjectionContext)this).ResolveOwnedInstances(instance);
+			
 			if (instance is IResolvable resolvable)
 			{
 				resolvable.Resolve();
