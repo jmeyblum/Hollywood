@@ -1,5 +1,6 @@
 using Hollywood.Runtime;
 using Hollywood.Runtime.Internal;
+using System;
 
 public interface ISomethingForA
 {
@@ -23,6 +24,15 @@ public class A
 {
 	[Needs]
 	ISomethingForA somethingForA;
+}
+
+public static class __InjectedInterfaces
+{
+    public static Type[] __interfaceNames = new Type[2]
+    {
+        typeof(ISomethingForA),
+        typeof(ISomethingOwnedByA)
+    };
 }
 
 ////[Owns(typeof(ISomethingOwnedByA))]

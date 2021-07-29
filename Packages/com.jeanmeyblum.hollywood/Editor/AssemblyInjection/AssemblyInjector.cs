@@ -43,10 +43,12 @@ namespace Hollywood.Editor.AssemblyInjection
 
 		private readonly MethodReference FindDependencyGenericMethodReference;
 
-		private readonly TypeReference StringType;
-		private readonly TypeReference StringArrayType;
 		private readonly TypeReference VoidType;
 		private readonly TypeReference ObjectType;
+		private readonly TypeReference TypeType;
+		private readonly TypeReference TypeArrayType;
+
+		private readonly MethodReference GetTypeFromHandleMethod;
 
 		private InjectionResult Result;
 
@@ -63,12 +65,14 @@ namespace Hollywood.Editor.AssemblyInjection
 			ResolveInterfaceMethod = AssemblyDefinition.MainModule.ImportReference(typeof(__Hollywood_Injected).GetMethod(nameof(__Hollywood_Injected.__Resolve), InstanceBindingFlags));
 			FindDependencyGenericMethodReference = AssemblyDefinition.MainModule.ImportReference(FindDependencyMethod);
 
-			StringType = AssemblyDefinition.MainModule.ImportReference(typeof(string));
-			StringArrayType = AssemblyDefinition.MainModule.ImportReference(typeof(string[]));
 			VoidType = AssemblyDefinition.MainModule.ImportReference(typeof(void));
 			ObjectType = AssemblyDefinition.MainModule.ImportReference(typeof(System.Object));
+			TypeType = AssemblyDefinition.MainModule.ImportReference(typeof(System.Type));
+			TypeArrayType = AssemblyDefinition.MainModule.ImportReference(typeof(System.Type[]));
 
 			ResolveProtectedMethodName = $"<>{HollywoodInjectedType.Name}<>{ResolveInterfaceMethod.Name}<>";
+
+			GetTypeFromHandleMethod = AssemblyDefinition.MainModule.ImportReference(typeof(System.Type).GetMethod(nameof(Type.GetTypeFromHandle), StaticBindingFlags));
 
 			Inject();
 		}
@@ -325,25 +329,24 @@ namespace Hollywood.Editor.AssemblyInjection
 			var injectedInterfacesType = new TypeDefinition(string.Format(Constants.DefaultTypeResolver.AssemblyNameTemplate, AssemblyDefinition.MainModule.Name), Constants.DefaultTypeResolver.TypeName, TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit);
 			injectedInterfacesType.BaseType = ObjectType;
 			var injectedInterfacesConstructor = new MethodDefinition(Constants.TypeInitializerMethodName, MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.Static | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName, VoidType);
-			var interfaceNamesMember = new FieldDefinition(Constants.DefaultTypeResolver.MemberName, FieldAttributes.Public | FieldAttributes.Static, StringArrayType);
+			var interfacesMember = new FieldDefinition(Constants.DefaultTypeResolver.MemberName, FieldAttributes.Public | FieldAttributes.Static, TypeArrayType);
 			injectedInterfacesType.Methods.Add(injectedInterfacesConstructor);
-			injectedInterfacesType.Fields.Add(interfaceNamesMember);
+			injectedInterfacesType.Fields.Add(interfacesMember);
 
 			AssemblyDefinition.MainModule.Types.Add(injectedInterfacesType);
 
-			var injectedInterfaceNames = injectedInterfaces.Select(i => i.ToString()).OrderBy(s => s);
 			var instructions = injectedInterfacesConstructor.Body.Instructions;
 
-			AddNewStringArrayInstructions(injectedInterfaceNames, instructions);
+			AddNewTypeArrayInstructions(injectedInterfaces.Select(s => s.Type), instructions);
 
-			instructions.Add(Instruction.Create(OpCodes.Stsfld, interfaceNamesMember));
+			instructions.Add(Instruction.Create(OpCodes.Stsfld, interfacesMember));
 			instructions.Add(Instruction.Create(OpCodes.Ret));
 		}
 
-		public void AddNewStringArrayInstructions(IEnumerable<string> arrayValues, Collection<Instruction> instructions)
+		public void AddNewTypeArrayInstructions(IEnumerable<TypeReference> arrayValues, Collection<Instruction> instructions)
 		{
 			instructions.Add(Instruction.Create(OpCodes.Ldc_I4, arrayValues.Count()));
-			instructions.Add(Instruction.Create(OpCodes.Newarr, StringType));
+			instructions.Add(Instruction.Create(OpCodes.Newarr, TypeType));
 			int valueIndex = 0;
 
 			foreach (var arrayValue in arrayValues)
@@ -394,7 +397,8 @@ namespace Hollywood.Editor.AssemblyInjection
 					instructions.Add(Instruction.Create(OpCodes.Ldc_I4, valueIndex));
 				}
 
-				instructions.Add(Instruction.Create(OpCodes.Ldstr, arrayValue));
+				instructions.Add(Instruction.Create(OpCodes.Ldtoken, arrayValue));
+				instructions.Add(Instruction.Create(OpCodes.Call, GetTypeFromHandleMethod));
 				instructions.Add(Instruction.Create(OpCodes.Stelem_Ref));
 
 				++valueIndex;

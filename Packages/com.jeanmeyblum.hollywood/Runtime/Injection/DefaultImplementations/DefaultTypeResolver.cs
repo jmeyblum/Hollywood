@@ -26,12 +26,10 @@ namespace Hollywood.Runtime
 				{
 					var interfaceNamesField = injectedInterfacesType.GetField(Constants.DefaultTypeResolver.MemberName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
 
-					var interfaceNames = (string[])interfaceNamesField.GetValue(null);
+					var interfaceTypes = (Type[])interfaceNamesField.GetValue(null);
 
-					foreach (var interfaceName in interfaceNames)
+					foreach (var interfaceType in interfaceTypes)
 					{
-						Type interfaceType = Type.GetType(interfaceName);
-
 						if (!InterfaceToTypes.ContainsKey(interfaceType))
 						{
 							InterfaceToTypes.Add(interfaceType, new HashSet<Type>());
