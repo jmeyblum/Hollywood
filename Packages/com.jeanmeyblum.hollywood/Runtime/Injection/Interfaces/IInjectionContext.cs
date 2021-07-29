@@ -10,6 +10,7 @@ namespace Hollywood.Runtime
 		IEnumerable<T> GetInstances<T>(object owner = null) where T : class;
 		void DisposeInstance(object instance);
 		void Reset();
+		void Dispose();
 	}
 
 	public interface IAdvancedInjectionContext : IInternalInjectionContext

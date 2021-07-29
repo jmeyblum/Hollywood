@@ -1,9 +1,8 @@
 {
     "name": "Assembly.A",
+    "rootNamespace": "",
     "references": [
-        "GUID:b57acc56a55ae9a4e8d80094efdcc695",
         "GUID:c43b95b88c212a8499e9e59de5572223",
-        "GUID:8111203135e9e3b4fa8a3d5be4872e32",
         "GUID:53a7db8d4ba7c824a80f0e40ca06f2c9"
     ],
     "includePlatforms": [],

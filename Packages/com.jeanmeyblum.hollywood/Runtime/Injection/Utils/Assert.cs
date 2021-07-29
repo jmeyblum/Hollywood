@@ -28,7 +28,7 @@ namespace Hollywood.Runtime
 		[Conditional(AssertDefineSymbol)]
 		public static void IsNotNull<T>(T instance, object message = null) where T : class
 		{
-			Asserter?.IsNull(instance, message);
+			Asserter?.IsNotNull(instance, message);
 		}
 
 		[Conditional(AssertDefineSymbol)]

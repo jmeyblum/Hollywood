@@ -10,7 +10,6 @@ namespace Hollywood.Runtime
 	// TODO: Supports GameObject?
 	// TODO: Parenting of existing external instance
 	// TODO: Instances tree visualization
-	// TODO: supports concrete type
 	// TODO: injectionContext should set himself as the current static one when used (to support editor scenario)
 	// TODO: add more logging 
 
@@ -84,6 +83,13 @@ namespace Hollywood.Runtime
 			Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
 
 			InjectionContext.Reset();
+		}
+
+		public static void Dispose()
+		{
+			InjectionContext?.Reset();
+
+			InjectionContext = null;
 		}
 
 		public static class Advanced

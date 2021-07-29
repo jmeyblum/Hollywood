@@ -9,7 +9,7 @@ using Mono.Collections.Generic;
 
 namespace Hollywood.Editor.AssemblyInjection
 {
-	// TODO: validate that __Hollywood_Injected and IOwner is not used by user
+	// TODO: validate that __Hollywood_Injected is not used by user
 
 	public class AssemblyInjector
 	{
