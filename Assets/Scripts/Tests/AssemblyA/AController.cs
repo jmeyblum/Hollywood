@@ -12,10 +12,10 @@ public class Patate
         int i = 0;
 
         FormattableString s = $"Test: {((Func<int>)(()=> { ++i; return i; })).Invoke()}";
-
+         
         Console.WriteLine(s);
         Console.WriteLine(s);
-	}
+	} 
 }
 
 public static class TestS
@@ -25,10 +25,12 @@ public static class TestS
 	{
         Hollywood.Runtime.UnityInjection.Helper.InitializeHollywoodWithDefaultForUnity();
 
-        var p = Injector.GetInstance<IBaseModule>(); //
+        var p = Injector.GetInstance<TestModule>(); //
 
-        //var t = Injector.GetInstance<ITestController>();
-         
+        var t = Injector.GetInstance<ITestController>(p);
+
+        var ts = Injector.GetInstances<IModule>();
+
         Injector.DisposeInstance(p);
 	}
 }
@@ -36,6 +38,7 @@ public static class TestS
 public interface ITestModule : IModule
 { }
 
+[Owns(typeof(IBInterface))]
 [Owns(typeof(IParent))]
 [Owns(typeof(ITestController))]
 public class TestModule : ITestModule
@@ -74,7 +77,6 @@ public interface IParent
 
 }
 
-[Owns(typeof(IBInterface))]
 public class ParentController : IParent, IDisposable, IResolvable
 {
     int toto = 42;
@@ -114,12 +116,12 @@ public interface ITestController
 
 }
 
-public class SomeB : IBInterface
+public class SomeB : IBInterface 
 {
 }
 
 [Owns(typeof(IBInterface2))]
-public class TestController : ParentAController, ITestController
+public class TestController : ParentAController, ITestController  
 {
     [Needs]
     IBInterface _myB;

@@ -18,6 +18,8 @@ namespace Hollywood.Editor.AssemblyInjection
 		internal static readonly Type OwnsAllAttributeType = typeof(OwnsAllAttribute);
 		internal static readonly Type NeedsAttributeType = typeof(NeedsAttribute);
 		internal static readonly Type InheritsFromInjectableAttributeType = typeof(InheritsFromInjectableAttribute);
+		internal static readonly Type IncludeTypeAttributeType = typeof(IncludeTypeAttribute);
+		internal static readonly Type IgnoreTypeAttributeType = typeof(IgnoreTypeAttribute);
 
 		private static readonly Type HollywoodInjectedType = typeof(__Hollywood_Injected);
 
@@ -47,6 +49,7 @@ namespace Hollywood.Editor.AssemblyInjection
 		private readonly TypeReference ObjectType;
 		private readonly TypeReference TypeType;
 		private readonly TypeReference TypeArrayType;
+		private readonly TypeReference TypeArrayArrayType;
 
 		private readonly MethodReference GetTypeFromHandleMethod;
 
@@ -69,6 +72,7 @@ namespace Hollywood.Editor.AssemblyInjection
 			ObjectType = AssemblyDefinition.MainModule.ImportReference(typeof(System.Object));
 			TypeType = AssemblyDefinition.MainModule.ImportReference(typeof(System.Type));
 			TypeArrayType = AssemblyDefinition.MainModule.ImportReference(typeof(System.Type[]));
+			TypeArrayArrayType = AssemblyDefinition.MainModule.ImportReference(typeof(System.Type[][]));
 
 			ResolveProtectedMethodName = $"<>{HollywoodInjectedType.Name}<>{ResolveInterfaceMethod.Name}<>";
 
@@ -88,7 +92,7 @@ namespace Hollywood.Editor.AssemblyInjection
 		{
 			Inject(injectionData.InjectableTypes);
 
-			Inject(injectionData.InjectedInterfaces);
+			Inject(injectionData.InjectedTypes);
 		}
 
 		private void Inject(IEnumerable<InjectableType> injectableTypes)
@@ -110,7 +114,7 @@ namespace Hollywood.Editor.AssemblyInjection
 		{
 			Result = InjectionResult.Modified;
 
-			bool isOwner = injectableType.ownedInterfaceType.Count > 0 || injectableType.ownedAllInterfaceType.Count > 0;
+			bool isOwner = injectableType.OwnedTypes.Count > 0 || injectableType.OwnedAllTypes.Count > 0;
 
 			if (isOwner)
 			{
@@ -127,8 +131,8 @@ namespace Hollywood.Editor.AssemblyInjection
 
 			var addOwnedInstancesInstructions = new List<Instruction>();
 
-			AddInstructionsForOwner(InjectorAddInstanceMethodReference, injectableType.ownedInterfaceType, addOwnedInstancesInstructions);
-			AddInstructionsForOwner(InjectorAddInstancesMethodReference, injectableType.ownedAllInterfaceType, addOwnedInstancesInstructions);
+			AddInstructionsForOwner(InjectorAddInstanceMethodReference, injectableType.OwnedTypes, addOwnedInstancesInstructions);
+			AddInstructionsForOwner(InjectorAddInstancesMethodReference, injectableType.OwnedAllTypes, addOwnedInstancesInstructions);
 
 			for (int instructionIndex = addOwnedInstancesInstructions.Count - 1; instructionIndex >= 0; --instructionIndex)
 			{
@@ -304,7 +308,7 @@ namespace Hollywood.Editor.AssemblyInjection
 
 		private void AddFindDependenciesInstructions(InjectableType injectableType, MethodDefinition resolveMethod)
 		{
-			foreach (var neededField in injectableType.neededInterfaceType)
+			foreach (var neededField in injectableType.NeededTypes)
 			{
 				resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
 				resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
@@ -317,91 +321,130 @@ namespace Hollywood.Editor.AssemblyInjection
 			}
 		}
 
-		private void Inject(IEnumerable<InjectedInterface> injectedInterfaces)
+		private void Inject(IEnumerable<TypeReference> injectedTypes)
 		{
-			if (injectedInterfaces.Count() == 0)
+			if (injectedTypes.Count() == 0)
 			{
 				return;
 			}
 
 			Result = InjectionResult.Modified;
 
-			var injectedInterfacesType = new TypeDefinition(string.Format(Constants.DefaultTypeResolver.AssemblyNameTemplate, AssemblyDefinition.MainModule.Name), Constants.DefaultTypeResolver.TypeName, TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit);
-			injectedInterfacesType.BaseType = ObjectType;
-			var injectedInterfacesConstructor = new MethodDefinition(Constants.TypeInitializerMethodName, MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.Static | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName, VoidType);
-			var interfacesMember = new FieldDefinition(Constants.DefaultTypeResolver.MemberName, FieldAttributes.Public | FieldAttributes.Static, TypeArrayType);
-			injectedInterfacesType.Methods.Add(injectedInterfacesConstructor);
-			injectedInterfacesType.Fields.Add(interfacesMember);
+			var injectedTypesType = new TypeDefinition(string.Format(Constants.DefaultTypeResolver.AssemblyNameTemplate, AssemblyDefinition.MainModule.Name), Constants.DefaultTypeResolver.TypeName, TypeAttributes.Public | TypeAttributes.Abstract | TypeAttributes.Sealed | TypeAttributes.AnsiClass | TypeAttributes.BeforeFieldInit);
+			injectedTypesType.BaseType = ObjectType;
+			var injectedTypesConstructor = new MethodDefinition(Constants.TypeInitializerMethodName, MethodAttributes.Private | MethodAttributes.HideBySig | MethodAttributes.Static | MethodAttributes.SpecialName | MethodAttributes.RTSpecialName, VoidType);
+			var typesMember = new FieldDefinition(Constants.DefaultTypeResolver.MemberName, FieldAttributes.Public | FieldAttributes.Static, TypeArrayArrayType);
+			injectedTypesType.Methods.Add(injectedTypesConstructor);
+			injectedTypesType.Fields.Add(typesMember);
 
-			AssemblyDefinition.MainModule.Types.Add(injectedInterfacesType);
+			AssemblyDefinition.MainModule.Types.Add(injectedTypesType);
 
-			var instructions = injectedInterfacesConstructor.Body.Instructions;
+			var instructions = injectedTypesConstructor.Body.Instructions;
 
-			AddNewTypeArrayInstructions(injectedInterfaces.Select(s => s.Type), instructions);
+			AddNewTypeArrayInstructions(injectedTypes, instructions);
 
-			instructions.Add(Instruction.Create(OpCodes.Stsfld, interfacesMember));
+			instructions.Add(Instruction.Create(OpCodes.Stsfld, typesMember));
 			instructions.Add(Instruction.Create(OpCodes.Ret));
 		}
 
 		public void AddNewTypeArrayInstructions(IEnumerable<TypeReference> arrayValues, Collection<Instruction> instructions)
 		{
-			instructions.Add(Instruction.Create(OpCodes.Ldc_I4, arrayValues.Count()));
-			instructions.Add(Instruction.Create(OpCodes.Newarr, TypeType));
+			instructions.Add(CreatePushIntToStackInstruction(arrayValues.Count()));
+			instructions.Add(Instruction.Create(OpCodes.Newarr, TypeArrayType));
 			int valueIndex = 0;
 
 			foreach (var arrayValue in arrayValues)
 			{
 				instructions.Add(Instruction.Create(OpCodes.Dup));
+				instructions.Add(CreatePushIntToStackInstruction(valueIndex));
 
-				if (valueIndex <= 8)
+				if (arrayValue is TypeDefinition typeDefinition && typeDefinition.HasInterfaces)
 				{
-					OpCode code = default;
-					switch (valueIndex)
+					var interfaces = typeDefinition.Interfaces;
+
+					instructions.Add(CreatePushIntToStackInstruction(interfaces.Count + 1));
+					instructions.Add(Instruction.Create(OpCodes.Newarr, TypeType));	
+
+					AddTypeToArray(instructions, 0, arrayValue);
+
+					int subValueIndex = 1;
+
+					foreach (var @interface in interfaces)
 					{
-						case 0:
-							code = OpCodes.Ldc_I4_0;
-							break;
-						case 1:
-							code = OpCodes.Ldc_I4_1;
-							break;
-						case 2:
-							code = OpCodes.Ldc_I4_2;
-							break;
-						case 3:
-							code = OpCodes.Ldc_I4_3;
-							break;
-						case 4:
-							code = OpCodes.Ldc_I4_4;
-							break;
-						case 5:
-							code = OpCodes.Ldc_I4_5;
-							break;
-						case 6:
-							code = OpCodes.Ldc_I4_6;
-							break;
-						case 7:
-							code = OpCodes.Ldc_I4_7;
-							break;
-						case 8:
-							code = OpCodes.Ldc_I4_8;
-							break;
+						AddTypeToArray(instructions, subValueIndex, @interface.InterfaceType);
+
+						++subValueIndex;
 					}
-					instructions.Add(Instruction.Create(code));
-				}
-				else if (valueIndex < 128)
-				{
-					instructions.Add(Instruction.Create(OpCodes.Ldc_I4_S, (sbyte)valueIndex));
 				}
 				else
 				{
-					instructions.Add(Instruction.Create(OpCodes.Ldc_I4, valueIndex));
+					instructions.Add(CreatePushIntToStackInstruction(1));
+					instructions.Add(Instruction.Create(OpCodes.Newarr, TypeType));
+
+					AddTypeToArray(instructions, 0, arrayValue);
 				}
 
-				instructions.Add(Instruction.Create(OpCodes.Ldtoken, arrayValue));
-				instructions.Add(Instruction.Create(OpCodes.Call, GetTypeFromHandleMethod));
 				instructions.Add(Instruction.Create(OpCodes.Stelem_Ref));
 
 				++valueIndex;
+			}
+		}
+
+		private void AddTypeToArray(Collection<Instruction> instructions, int subValueIndex, TypeReference interfaceTypeReference)
+		{
+			instructions.Add(Instruction.Create(OpCodes.Dup));
+			instructions.Add(CreatePushIntToStackInstruction(subValueIndex));
+
+			instructions.Add(Instruction.Create(OpCodes.Ldtoken, interfaceTypeReference));
+			instructions.Add(Instruction.Create(OpCodes.Call, GetTypeFromHandleMethod));
+
+			instructions.Add(Instruction.Create(OpCodes.Stelem_Ref));
+		}
+
+		private static Instruction CreatePushIntToStackInstruction(int valueIndex)
+		{
+			if (valueIndex <= 8)
+			{
+				OpCode code = default;
+				switch (valueIndex)
+				{
+					case 0:
+						code = OpCodes.Ldc_I4_0;
+						break;
+					case 1:
+						code = OpCodes.Ldc_I4_1;
+						break;
+					case 2:
+						code = OpCodes.Ldc_I4_2;
+						break;
+					case 3:
+						code = OpCodes.Ldc_I4_3;
+						break;
+					case 4:
+						code = OpCodes.Ldc_I4_4;
+						break;
+					case 5:
+						code = OpCodes.Ldc_I4_5;
+						break;
+					case 6:
+						code = OpCodes.Ldc_I4_6;
+						break;
+					case 7:
+						code = OpCodes.Ldc_I4_7;
+						break;
+					case 8:
+						code = OpCodes.Ldc_I4_8;
+						break;
+				}
+				return Instruction.Create(code);
+			}
+			else if (valueIndex < 128)
+			{
+				return Instruction.Create(OpCodes.Ldc_I4_S, (sbyte)valueIndex);
+			}
+			else
+			{
+				return Instruction.Create(OpCodes.Ldc_I4, valueIndex);
 			}
 		}
 

@@ -1,4 +1,5 @@
 ﻿using BSpace;
+using Hollywood.Runtime;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -6,6 +7,7 @@ using UnityEngine;
 
 namespace CSpace
 {
+	[IncludeType]
     public class ImplementationC : IBInterface2
     {
        // [UnityEditor.MenuItem("Jean/context")]

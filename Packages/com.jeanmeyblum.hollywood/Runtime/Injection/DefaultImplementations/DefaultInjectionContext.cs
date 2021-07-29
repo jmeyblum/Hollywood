@@ -31,7 +31,6 @@ namespace Hollywood.Runtime
 			Assert.IsNotNull(instance, $"{nameof(instance)} is null.");
 			Assert.IsTrue(Instances.Contains(instance), $"{instance} is unknown from this {nameof(IInjectionContext)}: {this}.");
 			Assert.IsFalse(instance is IModule, $"{instance} implements {nameof(IModule)} and thus can't have dependencies.");
-			Assert.IsFalse(typeof(T).IsInterface, $"{typeof(T).Name} is not an interface.");
 
 			var parent = Instances.GetParent(instance);
 			var child = instance;
@@ -134,7 +133,6 @@ namespace Hollywood.Runtime
 		{
 			Assert.IsNotNull(TypeResolver, $"{nameof(TypeResolver)} is null.");
 			Assert.IsNotNull(InstanceCreator, $"{nameof(InstanceCreator)} is null.");
-			Assert.IsFalse(typeof(T).IsInterface, $"{typeof(T).Name} is not an interface.");
 
 			if (owner != null)
 			{
@@ -165,7 +163,7 @@ namespace Hollywood.Runtime
 			Assert.IsNotNull(TypeResolver, $"{nameof(TypeResolver)} is null.");
 			Assert.IsNotNull(InstanceCreator, $"{nameof(InstanceCreator)} is null.");
 
-			var existingInstances = Instances.GetChildren(owner).Where(child => typeof(T).IsAssignableFrom(child.GetType())).Cast<T>();
+			var existingInstances = owner is null ? Enumerable.Empty<T>() : Instances.GetChildren(owner).Where(child => typeof(T).IsAssignableFrom(child.GetType())).Cast<T>();
 			var instanceTypes = TypeResolver.GetAll<T>();
 
 			Assert.IsNotNull(instanceTypes, $"{nameof(TypeResolver)} resolved to null for type {typeof(T).Name}.");

@@ -9,18 +9,19 @@ namespace Hollywood.Editor.AssemblyInjection
 	internal class InjectionData
 	{
 		private const string GetInstanceMethodName = nameof(Hollywood.Runtime.Injector.GetInstance);
+		private const string GetInstancesMethodName = nameof(Hollywood.Runtime.Injector.GetInstances);
 		private const string AddInstanceMethodName = nameof(Hollywood.Runtime.Injector.Advanced.AddInstance);
 		private const string AddInstancesMethodName = nameof(Hollywood.Runtime.Injector.Advanced.AddInstances);
 
 		private readonly string InjectorAdvancedTypeName = $"{AssemblyInjector.InjectorType.FullName}/{nameof(Hollywood.Runtime.Injector.Advanced)}";
 
 		public IEnumerable<InjectableType> InjectableTypes { get; private set; }
-		public IEnumerable<InjectedInterface> InjectedInterfaces { get; private set; }
+		public IEnumerable<TypeReference> InjectedTypes { get; private set; }
 
 		public InjectionData(ModuleDefinition moduleDefinition)
 		{
-			var injectableTypes = new HashSet<InjectableType>();
-			var injectedInterfaces = new HashSet<InjectedInterface>();
+			var injectableTypes = new List<InjectableType>();
+			var injectedTypes = new HashSet<TypeReference>(new TypeReferenceComprarer());
 
 			foreach (var typeDefinition in moduleDefinition.Types)
 			{
@@ -35,8 +36,8 @@ namespace Hollywood.Editor.AssemblyInjection
 					{
 						var ownedType = ownsAttribute.ConstructorArguments.First().Value as TypeReference;
 
-						injectableType.ownedInterfaceType.Add(ownedType);
-						injectedInterfaces.Add(new InjectedInterface(ownedType));
+						injectableType.OwnedTypes.Add(ownedType);
+						injectedTypes.Add(ownedType);
 					}
 				}
 
@@ -49,8 +50,8 @@ namespace Hollywood.Editor.AssemblyInjection
 					{
 						var ownedAllType = ownsAllAttribute.ConstructorArguments.First().Value as TypeReference;
 
-						injectableType.ownedAllInterfaceType.Add(ownedAllType);
-						injectedInterfaces.Add(new InjectedInterface(ownedAllType));
+						injectableType.OwnedAllTypes.Add(ownedAllType);
+						injectedTypes.Add(ownedAllType);
 					}
 				}
 
@@ -61,10 +62,10 @@ namespace Hollywood.Editor.AssemblyInjection
 
 					foreach (var neededField in neededFields)
 					{
-						var interfaceType = neededField.FieldType;
+						var neededType = neededField.FieldType;
 
-						injectableType.neededInterfaceType.Add(neededField, interfaceType);
-						injectedInterfaces.Add(new InjectedInterface(interfaceType));
+						injectableType.NeededTypes.Add(neededField, neededType);
+						injectedTypes.Add(neededType);
 					}
 				}
 
@@ -79,18 +80,19 @@ namespace Hollywood.Editor.AssemblyInjection
 								var methodReference = instruction.Operand as GenericInstanceMethod;
 								if (methodReference != null)
 								{
-									if (methodReference.DeclaringType.FullName == AssemblyInjector.InjectorType.FullName && methodReference.Name == GetInstanceMethodName)
+									if (methodReference.DeclaringType.FullName == AssemblyInjector.InjectorType.FullName && 
+										(methodReference.Name == GetInstanceMethodName || methodReference.Name == GetInstancesMethodName))
 									{
 										var injectedType = methodReference.GenericArguments.First();
 
-										injectedInterfaces.Add(new InjectedInterface(injectedType));
+										injectedTypes.Add(injectedType);
 									}
 									else if (methodReference.DeclaringType.FullName == InjectorAdvancedTypeName &&
 										(methodReference.Name == AddInstanceMethodName || methodReference.Name == AddInstancesMethodName))
 									{
 										var injectedType = methodReference.GenericArguments.First();
 
-										injectedInterfaces.Add(new InjectedInterface(injectedType));
+										injectedTypes.Add(injectedType);
 									}
 								}
 							}
@@ -101,6 +103,36 @@ namespace Hollywood.Editor.AssemblyInjection
 				if (injectableType != null)
 				{
 					injectableTypes.Add(injectableType);
+					injectedTypes.Add(injectableType.Type);
+				}
+			}
+
+			foreach (var typeDefinition in moduleDefinition.Types)
+			{
+				if (typeDefinition.IsAbstract || typeDefinition.IsValueType || typeDefinition.IsGenericParameter || typeDefinition.ContainsGenericParameter || typeDefinition.IsPrimitive || typeDefinition.IsArray)
+				{
+					continue;
+				}
+
+				bool hasIgnoreTypeAttribute = typeDefinition.CustomAttributes.Where(attribute => attribute.AttributeType.FullName == AssemblyInjector.IgnoreTypeAttributeType.FullName).Any();
+				if (hasIgnoreTypeAttribute)
+				{
+					continue;
+				}
+
+				bool hasIncludeTypeAttribute = typeDefinition.CustomAttributes.Where(attribute => attribute.AttributeType.FullName == AssemblyInjector.IncludeTypeAttributeType.FullName).Any();
+				if (hasIncludeTypeAttribute)
+				{
+					injectedTypes.Add(typeDefinition);
+					continue;
+				}
+
+				foreach (var typeInterface in typeDefinition.Interfaces)
+				{
+					if (injectedTypes.Contains(typeInterface.InterfaceType))
+					{
+						injectedTypes.Add(typeDefinition);
+					}
 				}
 			}
 
@@ -120,7 +152,7 @@ namespace Hollywood.Editor.AssemblyInjection
 			}
 
 			InjectableTypes = injectableTypes;
-			InjectedInterfaces = injectedInterfaces;
+			InjectedTypes = injectedTypes;
 		}
 	}
 }

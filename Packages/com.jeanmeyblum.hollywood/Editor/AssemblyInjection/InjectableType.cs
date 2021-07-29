@@ -8,9 +8,9 @@ namespace Hollywood.Editor.AssemblyInjection
 	{
 		public TypeDefinition Type;
 
-		public HashSet<TypeReference> ownedInterfaceType = new HashSet<TypeReference>();
-		public HashSet<TypeReference> ownedAllInterfaceType = new HashSet<TypeReference>();
-		public Dictionary<FieldDefinition, TypeReference> neededInterfaceType = new Dictionary<FieldDefinition, TypeReference>();
+		public HashSet<TypeReference> OwnedTypes = new HashSet<TypeReference>(TypeReferenceComprarer.Default);
+		public HashSet<TypeReference> OwnedAllTypes = new HashSet<TypeReference>(TypeReferenceComprarer.Default);
+		public Dictionary<FieldDefinition, TypeReference> NeededTypes = new Dictionary<FieldDefinition, TypeReference>();
 
 		public TypeReference InjectableBaseType;
 

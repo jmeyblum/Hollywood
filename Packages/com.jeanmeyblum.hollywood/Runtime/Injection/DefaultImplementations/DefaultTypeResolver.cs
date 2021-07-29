@@ -10,7 +10,7 @@ namespace Hollywood.Runtime
 	public class DefaultTypeResolver : ITypeResolver
 	{
 		private static readonly Type IIgnoreAttributeType = typeof(IgnoreTypeAttribute);
-		private Dictionary<Type, HashSet<Type>> InterfaceToTypes = new Dictionary<Type, HashSet<Type>>();
+		private Dictionary<Type, HashSet<Type>> TypesMap = new Dictionary<Type, HashSet<Type>>();
 
 		public DefaultTypeResolver()
 		{
@@ -18,61 +18,89 @@ namespace Hollywood.Runtime
 
 			foreach (var assembly in assemblies)
 			{
-				var injectedInterfacesTypeName = string.Format(Constants.DefaultTypeResolver.TypeNameTemplate, assembly.Modules.First().Name);
+				var injectedTypesTypeName = string.Format(Constants.DefaultTypeResolver.TypeNameTemplate, assembly.Modules.First().Name);
 
-				var injectedInterfacesType = assembly.GetType(injectedInterfacesTypeName, throwOnError: false);
+				var injectedTypesType = assembly.GetType(injectedTypesTypeName, throwOnError: false);
 
-				if (injectedInterfacesType != null)
+				if (injectedTypesType != null)
 				{
-					var interfaceNamesField = injectedInterfacesType.GetField(Constants.DefaultTypeResolver.MemberName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+					var typesField = injectedTypesType.GetField(Constants.DefaultTypeResolver.MemberName, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
 
-					var interfaceTypes = (Type[])interfaceNamesField.GetValue(null);
+					var typesMap = (Type[][])typesField.GetValue(null);
 
-					foreach (var interfaceType in interfaceTypes)
+					foreach (var types in typesMap)
 					{
-						if (!InterfaceToTypes.ContainsKey(interfaceType))
+						for (int typeIndex = 0; typeIndex < types.Length; ++typeIndex)
 						{
-							InterfaceToTypes.Add(interfaceType, new HashSet<Type>());
+							Type type = types[typeIndex];
+							if (!TypesMap.TryGetValue(type, out HashSet<Type> relatedType))
+							{
+								relatedType = new HashSet<Type>();
+								TypesMap.Add(type, relatedType);
+							}
+
+							if (typeIndex > 0)
+							{
+								relatedType.Add(types[0]);
+							}
+							else if (!type.IsInterface)
+							{
+								relatedType.Add(type);
+							}
 						}
 					}
 				}
 			}
 
-			var types = assemblies.SelectMany(a => a.GetTypes())
-				.Where(t =>
-				t.IsClass &&
-				!t.IsAbstract &&
-				!t.IsArray &&
-				!t.IsPrimitive &&
-				!t.IsEnum &&
-				!t.IsGenericParameter &&
-				!t.ContainsGenericParameters &&
-				t.GetConstructor(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic, null, Type.EmptyTypes, null) != null);
+			HashSet<Type> typesToRemove = new HashSet<Type>();
+			HashSet<Type> typesToAdd = new HashSet<Type>();
+			HashSet<Type> emptyTypes = new HashSet<Type>();
 
-			foreach (var type in types)
+			foreach (var typeMap in TypesMap)
 			{
-				var interfaces = type.GetInterfaces();
+				var map = typeMap.Value;
 
-				bool isTypeIgnored = false;
-				foreach (var typeInterfaces in interfaces)
+				typesToRemove.Clear();
+				typesToAdd.Clear();
+
+				foreach (var type in map)
 				{
-					if(typeInterfaces == IIgnoreAttributeType)
+					if (type.IsInterface)
 					{
-						isTypeIgnored = true;
-						break;
+						typesToRemove.Add(type);
+
+						FindTypeToAddRecursively(type, typesToAdd);
 					}
 				}
 
-				if(isTypeIgnored)
-				{
-					continue;
-				}
+				map.ExceptWith(typesToRemove);
+				map.UnionWith(typesToAdd);
 
-				foreach (var typeInterfaces in interfaces)
+				if (!map.Any())
 				{
-					if (InterfaceToTypes.TryGetValue(typeInterfaces, out var interfaceTypes))
+					emptyTypes.Add(typeMap.Key);
+				}
+			}
+
+			foreach (var emptyType in emptyTypes)
+			{
+				TypesMap.Remove(emptyType);
+			}
+
+			void FindTypeToAddRecursively(Type type, HashSet<Type> typesToAdd)
+			{
+				if (TypesMap.TryGetValue(type, out var types))
+				{
+					foreach (var typeToAdd in types)
 					{
-						interfaceTypes.Add(type);
+						if (typeToAdd.IsInterface)
+						{
+							FindTypeToAddRecursively(typeToAdd, typesToAdd);
+						}
+						else
+						{
+							typesToAdd.Add(typeToAdd);
+						}
 					}
 				}
 			}
@@ -80,16 +108,16 @@ namespace Hollywood.Runtime
 
 		Type ITypeResolver.Get<T>()
 		{
-			Assert.IsTrue(InterfaceToTypes.TryGetValue(typeof(T), out var types) && types.Count == 1);
+			Assert.IsTrue(TypesMap.TryGetValue(typeof(T), out var types) && types.Count == 1);
 
-			return InterfaceToTypes[typeof(T)].First();
+			return TypesMap[typeof(T)].First();
 		}
 
 		IEnumerable<Type> ITypeResolver.GetAll<T>()
 		{
-			Assert.IsTrue(InterfaceToTypes.TryGetValue(typeof(T), out var types) && types.Count > 0);
+			Assert.IsTrue(TypesMap.TryGetValue(typeof(T), out var types) && types.Count > 0);
 
-			return InterfaceToTypes[typeof(T)];
+			return TypesMap[typeof(T)];
 		}
 
 		void ITypeResolver.Reset()
