@@ -25,11 +25,11 @@ namespace Hollywood.Runtime
 		/// <typeparam name="T">Type of the dependency.</typeparam>
 		/// <param name="instance">The object looking for a dependency.</param>
 		/// <returns></returns>
-		public static T FindDependency<T>(object instance) where T : class
+		public static T FindDependency<T>(object instance, bool ignoreInitialization = false) where T : class
 		{
 			Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
 
-			return InjectionContext.FindDependency<T>(instance);
+			return InjectionContext.FindDependency<T>(instance, ignoreInitialization);
 		}
 
 		/// <summary>

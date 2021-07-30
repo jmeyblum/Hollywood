@@ -10,7 +10,7 @@ namespace Hollywood.Editor.AssemblyInjection
 
 		public HashSet<TypeReference> OwnedTypes = new HashSet<TypeReference>(TypeReferenceComprarer.Default);
 		public HashSet<TypeReference> OwnedAllTypes = new HashSet<TypeReference>(TypeReferenceComprarer.Default);
-		public Dictionary<FieldDefinition, TypeReference> NeededTypes = new Dictionary<FieldDefinition, TypeReference>();
+		public Dictionary<FieldDefinition, (TypeReference, bool)> NeededTypes = new Dictionary<FieldDefinition, (TypeReference, bool)>();
 
 		public TypeReference InjectableBaseType;
 

@@ -314,7 +314,9 @@ namespace Hollywood.Editor.AssemblyInjection
 				resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
 
 				var resolveDependencyMethodReference = new GenericInstanceMethod(FindDependencyGenericMethodReference);
-				resolveDependencyMethodReference.GenericArguments.Add(neededField.Value);
+				resolveDependencyMethodReference.GenericArguments.Add(neededField.Value.Item1);
+
+				resolveMethod.Body.Instructions.Add(Instruction.Create(neededField.Value.Item2 ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0));
 
 				resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Call, resolveDependencyMethodReference));
 				resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Stfld, neededField.Key));

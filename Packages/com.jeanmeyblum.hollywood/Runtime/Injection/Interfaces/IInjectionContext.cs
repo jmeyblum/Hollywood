@@ -5,7 +5,7 @@ namespace Hollywood.Runtime
 {
 	public interface IInjectionContext : IAdvancedInjectionContext
 	{
-		T FindDependency<T>(object instance) where T : class;
+		T FindDependency<T>(object instance, bool ignoreInitialization = false) where T : class;
 		T GetInstance<T>(object owner = null) where T : class;
 		IEnumerable<T> GetInstances<T>(object owner = null) where T : class;
 		void DisposeInstance(object instance);

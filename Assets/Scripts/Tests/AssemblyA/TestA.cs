@@ -67,16 +67,14 @@ public class CharacterSystem : IInitializable
 
 public class InventorySystem : IInitializable
 {
-    //[Needs]
-    private PlayerCharacterSystem _playerCharacterSystem;
+    [Needs(ignoreInitialization: true)]
+    private PlayerCharacterSystem _playerCharacterSystem; 
 
     async Task IInitializable.Initialize(CancellationToken token)
 	{
-        _playerCharacterSystem = Injector.GetInstance<PlayerCharacterSystem>(this);
-
         UnityEngine.Debug.Log($"{nameof(InventorySystem)} - pre");
 
-        await Task.Delay(1000);
+        await Task.Delay(1001);
 
         UnityEngine.Debug.Log($"{nameof(InventorySystem)} - post");
     }
@@ -88,13 +86,22 @@ public class PlayerSystem
     private PlayerPreferencesSystem _playerPreferencesSystem;
 }
 
-public class PlayerCharacterSystem
+public class PlayerCharacterSystem : IInitializable
 {
     [Needs]
     private PlayerSystem _playerSystem;
 
     [Needs]
     private CharacterSystem characterSystem;
+
+    public bool Init = false;
+
+    Task IInitializable.Initialize(CancellationToken token)
+    {
+        Init = true;
+
+        return Task.CompletedTask;
+	}
 }
 
 public class PlayerPreferencesSystem : IInitializable

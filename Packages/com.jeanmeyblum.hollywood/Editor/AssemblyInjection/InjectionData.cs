@@ -64,7 +64,10 @@ namespace Hollywood.Editor.AssemblyInjection
 					{
 						var neededType = neededField.FieldType;
 
-						injectableType.NeededTypes.Add(neededField, neededType);
+						var neededAttribute = neededField.CustomAttributes.First(a => a.AttributeType.FullName == AssemblyInjector.NeedsAttributeType.FullName);
+						var ignoreInitialization = (bool)(neededAttribute.ConstructorArguments.FirstOrDefault().Value ?? false);
+
+						injectableType.NeededTypes.Add(neededField, (neededType, ignoreInitialization));
 						injectedTypes.Add(neededType);
 					}
 				}

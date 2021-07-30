@@ -8,7 +8,7 @@ namespace Hollywood.Runtime.Internal
 	{
 		public InstanceState State = InstanceState.UnResolved;
 
-		public HashSet<object> ResolvingNeeds;
+		public Dictionary<object, bool> ResolvingNeeds;
 
 		public Task ResolvingTask;
 		public Task InitializationTask;

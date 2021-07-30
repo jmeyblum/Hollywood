@@ -5,7 +5,7 @@ namespace Hollywood.Runtime
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 	public class OwnsAllAttribute : Attribute
 	{
-		private Type _interfaceType;
+		private readonly Type _interfaceType;
 
 		public OwnsAllAttribute(Type interfaceType)
 		{

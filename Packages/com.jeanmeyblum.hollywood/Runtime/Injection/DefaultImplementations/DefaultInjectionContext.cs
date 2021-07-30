@@ -28,7 +28,7 @@ namespace Hollywood.Runtime
 		public DefaultInjectionContext()
 		{ }
 
-		T IInjectionContext.FindDependency<T>(object instance)
+		T IInjectionContext.FindDependency<T>(object instance, bool ignoreInitialization)
 		{
 			Assert.IsNotNull(instance, $"{nameof(instance)} is null.");
 			Assert.IsTrue(Instances.Contains(instance), $"{instance} is unknown from this {nameof(IInjectionContext)}: {this}.");
@@ -62,8 +62,8 @@ namespace Hollywood.Runtime
 
 				if (instanceData.State == InstanceState.Resolving)
 				{
-					instanceData.ResolvingNeeds ??= new HashSet<object>();
-					instanceData.ResolvingNeeds.Add(dependency);
+					instanceData.ResolvingNeeds ??= new Dictionary<object, bool>();
+					instanceData.ResolvingNeeds[dependency] = ignoreInitialization;
 				}
 			}
 
@@ -267,9 +267,13 @@ namespace Hollywood.Runtime
 
 			if (instanceData.ResolvingNeeds != null)
 			{
-				foreach (var dependency in instanceData.ResolvingNeeds)
+				foreach (var dependencyKVP in instanceData.ResolvingNeeds)
 				{
-					VerifyCycle(dependency, needs);
+					var ignoreInitialization = dependencyKVP.Value;
+					if (!ignoreInitialization)
+					{
+						VerifyCycle(dependencyKVP.Key, needs);
+					}
 				}
 			}
 
@@ -312,8 +316,10 @@ namespace Hollywood.Runtime
 				{
 					List<Task> resolvingTasks = new List<Task>();
 
-					foreach (var dependency in instanceData.ResolvingNeeds)
+					foreach (var dependencyKVP in instanceData.ResolvingNeeds)
 					{
+						var dependency = dependencyKVP.Key;
+
 						Assert.IsTrue(InstancesData.ContainsKey(dependency), $"{dependency} is unknown from this {nameof(IInjectionContext)}: {this}.");
 
 						var dependencyInstanceData = InstancesData[dependency];
@@ -328,13 +334,19 @@ namespace Hollywood.Runtime
 
 					List<Task> initializationTasks = new List<Task>();
 
-					foreach (var dependency in instanceData.ResolvingNeeds)
+					foreach (var dependencyKVP in instanceData.ResolvingNeeds)
 					{
-						Assert.IsTrue(InstancesData.ContainsKey(dependency), $"{dependency} is unknown from this {nameof(IInjectionContext)}: {this}.");
+						var dependency = dependencyKVP.Key;
+						var ignoreInitialization = dependencyKVP.Value;
 
-						var dependencyInstanceData = InstancesData[dependency];
+						if (!ignoreInitialization)
+						{
+							Assert.IsTrue(InstancesData.ContainsKey(dependency), $"{dependency} is unknown from this {nameof(IInjectionContext)}: {this}.");
 
-						initializationTasks.Add(dependencyInstanceData.InitializationTask);
+							var dependencyInstanceData = InstancesData[dependency];
+
+							initializationTasks.Add(dependencyInstanceData.InitializationTask);
+						}
 					}
 
 					await Task.WhenAll(initializationTasks);

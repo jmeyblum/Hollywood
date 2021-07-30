@@ -9,7 +9,7 @@ namespace Hollywood.Runtime
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
 	public class InheritsFromInjectableAttribute : Attribute
 	{
-		private Type _baseType;
+		private readonly Type _baseType;
 
 		public InheritsFromInjectableAttribute(Type baseType)
 		{
