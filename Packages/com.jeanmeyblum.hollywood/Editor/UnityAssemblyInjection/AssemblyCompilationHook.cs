@@ -75,7 +75,13 @@ namespace Hollywood.Editor.UnityAssemblyInjection
 
 		public static void Inject(string assemblyPath)
 		{
-			using (var assemblyDefinition = AssemblyDefinition.ReadAssembly(assemblyPath, new ReaderParameters(ReadingMode.Immediate) { ReadSymbols = true, ReadWrite = true, AssemblyResolver = new DefaultAssemblyResolver(), SymbolReaderProvider = new PdbReaderProvider() }))
+			var assemblyResolver = new DefaultAssemblyResolver();
+			foreach(var path in CompilationPipeline.GetPrecompiledAssemblyPaths(CompilationPipeline.PrecompiledAssemblySources.All).Select(p => Path.GetDirectoryName(p)).Distinct())
+			{
+				assemblyResolver.AddSearchDirectory(path);
+			}
+
+			using (var assemblyDefinition = AssemblyDefinition.ReadAssembly(assemblyPath, new ReaderParameters(ReadingMode.Immediate) { ReadSymbols = true, ReadWrite = true, AssemblyResolver = assemblyResolver, SymbolReaderProvider = new PdbReaderProvider() }))
 			{
 				var injectionResult = AssemblyInjector.Inject(assemblyDefinition);
 

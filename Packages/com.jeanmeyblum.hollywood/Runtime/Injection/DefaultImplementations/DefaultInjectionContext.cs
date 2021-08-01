@@ -34,8 +34,8 @@ namespace Hollywood.Runtime
 			Assert.IsTrue(Instances.Contains(instance), $"{instance} is unknown from this {nameof(IInjectionContext)}: {this}.");
 			Assert.IsFalse(instance is IModule, $"{instance} implements {nameof(IModule)} and thus can't have dependencies.");
 
-			var parent = Instances.GetParent(instance);
-			var child = instance;
+			var parent = instance;
+			object child = null;
 
 			T dependency = null;
 			while (parent != null)
@@ -255,31 +255,6 @@ namespace Hollywood.Runtime
 			instanceData.State = InstanceState.Initializing;
 		}
 
-		private void VerifyCycle(object instance, List<object> needs)
-		{
-			Assert.IsFalse(needs.Contains(instance), $"There is an initialization cycle introduced by a cyclic chain of needed dependencies: {string.Join(" -> ", needs)} -> {instance}");
-
-			Assert.IsTrue(InstancesData.ContainsKey(instance), $"{instance} is unknown from this {nameof(IInjectionContext)}: {this}.");
-
-			var instanceData = InstancesData[instance];
-
-			needs.Add(instance);
-
-			if (instanceData.ResolvingNeeds != null)
-			{
-				foreach (var dependencyKVP in instanceData.ResolvingNeeds)
-				{
-					var ignoreInitialization = dependencyKVP.Value;
-					if (!ignoreInitialization)
-					{
-						VerifyCycle(dependencyKVP.Key, needs);
-					}
-				}
-			}
-
-			needs.Remove(instance);
-		}
-
 		private async Task CreateInstanceDataResolvingTask(object instance)
 		{
 			try
@@ -288,11 +263,12 @@ namespace Hollywood.Runtime
 				Assert.IsTrue(Instances.Contains(instance) && InstancesData.ContainsKey(instance), $"{instance} is unknown from this {nameof(IInjectionContext)}: {this}.");
 
 				var instanceData = InstancesData[instance];
+				var token = instanceData.TaskTokenSource.Token;
 
 				while (instanceData.State < InstanceState.Initializing)
 				{
 					await Task.Yield();
-					instanceData.TaskTokenSource.Token.ThrowIfCancellationRequested();
+					token.ThrowIfCancellationRequested();
 				}
 			}
 			catch (Exception e)
@@ -309,6 +285,7 @@ namespace Hollywood.Runtime
 				Assert.IsTrue(Instances.Contains(instance) && InstancesData.ContainsKey(instance), $"{instance} is unknown from this {nameof(IInjectionContext)}: {this}.");
 
 				var instanceData = InstancesData[instance];
+				var token = instanceData.TaskTokenSource.Token;
 
 				await instanceData.ResolvingTask;
 
@@ -328,7 +305,7 @@ namespace Hollywood.Runtime
 					}
 
 					await Task.WhenAll(resolvingTasks);
-					instanceData.TaskTokenSource.Token.ThrowIfCancellationRequested();
+					token.ThrowIfCancellationRequested();
 
 					VerifyCycle(instance, new List<object>());
 
@@ -352,11 +329,16 @@ namespace Hollywood.Runtime
 					await Task.WhenAll(initializationTasks);
 				}
 
-				instanceData.TaskTokenSource.Token.ThrowIfCancellationRequested();
+				token.ThrowIfCancellationRequested();
 
 				if (instance is IInitializable initializable)
 				{
-					await initializable.Initialize(instanceData.TaskTokenSource.Token);
+					await initializable.Initialize(token);
+				}
+
+				if (instance is IUpdatable updatable)
+				{
+					CreateUpdatableTask(updatable);
 				}
 
 				instanceData.State = InstanceState.Initialized;
@@ -364,6 +346,54 @@ namespace Hollywood.Runtime
 			catch(Exception e)
 			{
 				Log.LogFatalError(e);
+			}
+
+			void VerifyCycle(object instance, List<object> needs)
+			{
+				Assert.IsFalse(needs.Contains(instance), $"There is an initialization cycle introduced by a cyclic chain of needed dependencies: {string.Join(" -> ", needs)} -> {instance}");
+
+				Assert.IsTrue(InstancesData.ContainsKey(instance), $"{instance} is unknown from this {nameof(IInjectionContext)}: {this}.");
+
+				var instanceData = InstancesData[instance];
+
+				needs.Add(instance);
+
+				if (instanceData.ResolvingNeeds != null)
+				{
+					foreach (var dependencyKVP in instanceData.ResolvingNeeds)
+					{
+						var ignoreInitialization = dependencyKVP.Value;
+						if (!ignoreInitialization)
+						{
+							VerifyCycle(dependencyKVP.Key, needs);
+						}
+					}
+				}
+
+				needs.Remove(instance);
+			}
+		}
+
+		private async void CreateUpdatableTask(IUpdatable instance)
+		{
+			try
+			{
+				Assert.IsNotNull(instance, $"{nameof(instance)} is null.");
+				Assert.IsTrue(Instances.Contains(instance) && InstancesData.ContainsKey(instance), $"{instance} is unknown from this {nameof(IInjectionContext)}: {this}.");
+
+				var instanceData = InstancesData[instance];
+
+				var token = instanceData.TaskTokenSource.Token;
+
+				while (!token.IsCancellationRequested)
+				{
+					await instance.Update(token);
+					await Task.Yield();
+				}
+			}
+			catch(Exception e)
+			{
+				Log.LogError(e);
 			}
 		}
 

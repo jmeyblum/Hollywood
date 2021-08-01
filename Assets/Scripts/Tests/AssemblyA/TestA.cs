@@ -1,27 +1,53 @@
 ﻿using Hollywood.Runtime;
+using Hollywood.Runtime.StateMachine;
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using UnityEngine;
 
-public static class TestCase
+public static class Application
 {
-    [UnityEditor.MenuItem("Jean/Activate")]
-    public static void Activate()
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    private static void BootApplication()
 	{
-        Injector.Dispose();
-        Hollywood.Runtime.UnityInjection.Helper.InitializeHollywoodWithDefaultForUnity();
-
-        var p = Injector.GetInstance<ApplicationModule>();
-
-        //Injector.DisposeInstance(p);
-	}
+        Injector.GetInstance<ApplicationModule>();
+    }
 }
+
+public class BootSystem : IUpdatable
+{
+    [Needs]
+    private ApplicationStateMachine _stateMachine;
+
+	Task IUpdatable.Update(CancellationToken token)
+	{
+        if (Input.GetKeyDown(KeyCode.A))
+        {
+            _stateMachine.TransitionTo<LobbyState>();
+        }
+
+        return Task.CompletedTask;
+    }
+}
+
+[Owns(typeof(BootSystem))]
+public class BootState : IState
+{
+
+}
+
+[Owns(typeof(LobbySystem))]
+public class LobbyState : IState
+{
+
+}
+
+public sealed class ApplicationStateMachine : StateMachine<BootState> { }
 
 [Owns(typeof(PlayerModule))]
 [Owns(typeof(GameplayModule))]
 [Owns(typeof(AnalyticModule))]
-[Owns(typeof(LobbySystem))]
+[Owns(typeof(ApplicationStateMachine))]
 public class ApplicationModule : IModule
 {
 
