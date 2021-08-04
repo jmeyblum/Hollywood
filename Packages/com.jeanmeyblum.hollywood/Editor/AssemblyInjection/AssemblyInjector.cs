@@ -308,6 +308,18 @@ namespace Hollywood.Editor.AssemblyInjection
 
 		private void AddFindDependenciesInstructions(InjectableType injectableType, MethodDefinition resolveMethod)
 		{
+			TypeDefinition declaringType = injectableType.Type;
+
+			GenericInstanceType instanceType = null;
+			if (declaringType.HasGenericParameters)
+			{
+				instanceType = new GenericInstanceType(declaringType);
+				foreach (var parameter in declaringType.GenericParameters)
+				{
+					instanceType.GenericArguments.Add(parameter);
+				}				
+			}
+
 			foreach (var neededField in injectableType.NeededTypes)
 			{
 				resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
@@ -319,7 +331,14 @@ namespace Hollywood.Editor.AssemblyInjection
 				resolveMethod.Body.Instructions.Add(Instruction.Create(neededField.Value.Item2 ? OpCodes.Ldc_I4_1 : OpCodes.Ldc_I4_0));
 
 				resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Call, resolveDependencyMethodReference));
-				resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Stfld, neededField.Key));
+
+				FieldReference field = neededField.Key; 
+				if (declaringType.HasGenericParameters)
+				{
+					field = new FieldReference(neededField.Key.Name, neededField.Key.FieldType, instanceType);
+				}
+
+				resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Stfld, field));
 			}
 		}
 

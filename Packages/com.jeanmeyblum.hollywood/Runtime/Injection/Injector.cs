@@ -95,7 +95,7 @@ namespace Hollywood.Runtime
 		public static class Advanced
 		{
 			/// <summary>
-			/// Adds an instance of type T for the specified optional owned.
+			/// Adds an instance of type T for the specified optional owner.
 			/// This will return any existing instance that already matches the given type.
 			/// Instances created here are not automatically resolved. Use ResolveInstance() to do so.
 			/// </summary>
@@ -111,7 +111,22 @@ namespace Hollywood.Runtime
 			}
 
 			/// <summary>
-			/// Adds instances of type T for the specified optional owned.
+			/// Adds an instance of type T created externally for the specified optional owner.
+			/// This can be used when the instance has been created from an external source.
+			/// </summary>
+			/// <typeparam name="T"></typeparam>
+			/// <param name="instance"></param>
+			/// <param name="owner"></param>
+			/// <param name="autoResolve">Can be set to false if this instance needs other instances to exists prior to be resolved.</param>
+			public static void AddExternalInstance<T>(T instance, object owner = null, bool autoResolve = true) where T : class
+			{
+				Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
+
+				InjectionContext.AddExternalInstance<T>(instance, owner, autoResolve);
+			}
+
+			/// <summary>
+			/// Adds instances of type T for the specified optional owner.
 			/// This will return any existing instances that already matches the given type and new instances created from other concrete types given by the context that match T.
 			/// Instances created here are not automatically resolved. Use ResolveInstances() to do so.
 			/// </summary>

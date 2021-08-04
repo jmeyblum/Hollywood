@@ -144,6 +144,8 @@ namespace Hollywood.Runtime
 
 		void IInjectionContext.Reset()
 		{
+			((IInternalInjectionContext)this).DisposeOwnedInstances(Instances.Root);
+
 			TypeResolver.Reset();
 			InstanceCreator.Reset();
 			Instances.Reset();
@@ -164,16 +166,15 @@ namespace Hollywood.Runtime
 			Assert.IsNotNull(TypeResolver, $"{nameof(TypeResolver)} is null.");
 			Assert.IsNotNull(InstanceCreator, $"{nameof(InstanceCreator)} is null.");
 
-			if (owner != null)
+			owner ??= Instances.Root;
+
+			foreach (var child in Instances.GetChildren(owner))
 			{
-				foreach (var child in Instances.GetChildren(owner))
+				if (typeof(T).IsAssignableFrom(child.GetType()))
 				{
-					if (typeof(T).IsAssignableFrom(child.GetType()))
-					{
-						return (T)child;
-					}
+					return (T)child;
 				}
-			}
+			}			
 
 			var instanceType = TypeResolver.Get<T>();
 
@@ -185,12 +186,28 @@ namespace Hollywood.Runtime
 			return instance;
 		}
 
+		void IAdvancedInjectionContext.AddExternalInstance<T>(T instance, object owner, bool autoResolve)
+		{
+			owner ??= Instances.Root;
+
+			Assert.IsFalse(Instances.GetChildren(owner).Any(child => typeof(T).IsAssignableFrom(child.GetType())), $"{owner} already contains an instance for type {typeof(T).Name}.");
+
+			SetupInstance<T>(owner, instance);
+
+			if (autoResolve)
+			{
+				((IAdvancedInjectionContext)this).ResolveInstance(instance);
+			}
+		}
+
 		IEnumerable<T> IAdvancedInjectionContext.AddInstances<T>(object owner)
 		{
 			Assert.IsNotNull(TypeResolver, $"{nameof(TypeResolver)} is null.");
 			Assert.IsNotNull(InstanceCreator, $"{nameof(InstanceCreator)} is null.");
 
-			var existingInstances = owner is null ? Enumerable.Empty<T>() : Instances.GetChildren(owner).Where(child => typeof(T).IsAssignableFrom(child.GetType())).Cast<T>();
+			owner ??= Instances.Root;
+
+			var existingInstances = Instances.GetChildren(owner).Where(child => typeof(T).IsAssignableFrom(child.GetType())).Cast<T>();
 			var instanceTypes = TypeResolver.GetAll<T>();
 
 			Assert.IsNotNull(instanceTypes, $"{nameof(TypeResolver)} resolved to null for type {typeof(T).Name}.");
@@ -215,6 +232,13 @@ namespace Hollywood.Runtime
 		{
 			var instance = (T)InstanceCreator.Create(instanceType);
 
+			SetupInstance(owner, instance);
+
+			return instance;
+		}
+
+		private void SetupInstance<T>(object owner, T instance) where T : class
+		{
 			Instances.Add(instance, owner);
 			var instanceData = new InstanceData();
 			InstancesData.Add(instance, instanceData);
@@ -222,8 +246,6 @@ namespace Hollywood.Runtime
 			instanceData.TaskTokenSource = new CancellationTokenSource();
 			instanceData.ResolvingTask = CreateInstanceDataResolvingTask(instance);
 			instanceData.InitializationTask = CreateInstanceDataInitializationTask(instance);
-
-			return instance;
 		}
 
 		void IAdvancedInjectionContext.ResolveInstance(object instance)

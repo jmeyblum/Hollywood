@@ -3,32 +3,44 @@ using System.Linq;
 
 namespace Hollywood.Runtime.Internal
 {
-	public class Hierarchy<T> where T : class
+	public class Hierarchy<T> where T : class, new()
 	{
+		public readonly T Root = new T();
+
 		private Dictionary<T, HashSet<T>> ParentToChildren = new Dictionary<T, HashSet<T>>();
 		private Dictionary<T, T> ChildToParent = new Dictionary<T, T>();
 
+		public Hierarchy()
+		{
+			ChildToParent[Root] = Root;
+		}
+
 		public void Add(T element, T parent = null)
 		{
-			if (parent != null && !Contains(parent))
+			parent ??= Root;
+
+			if (!Contains(parent))
 			{
 				Add(parent);
 			}
 
-			Assert.IsTrue(!Contains(element) || GetParent(element) == null, $"{element} is already parented.");
+			Assert.IsTrue(!Contains(element) || GetParent(element) == Root, $"{element} is already parented.");
 
-			ChildToParent[element] = parent ?? element;
-
-			if (parent != null)
+			if (Contains(element) && GetParent(element) == Root)
 			{
-				if (!ParentToChildren.TryGetValue(parent, out HashSet<T> parentChildren))
-				{
-					parentChildren = new HashSet<T>();
-					ParentToChildren.Add(parent, parentChildren);
-				}
-
-				parentChildren.Add(element);
+				ChildToParent.Remove(element);
+				ParentToChildren[Root].Remove(element);
 			}
+
+			ChildToParent[element] = parent;
+
+			if (!ParentToChildren.TryGetValue(parent, out HashSet<T> parentChildren))
+			{
+				parentChildren = new HashSet<T>();
+				ParentToChildren.Add(parent, parentChildren);
+			}
+
+			parentChildren.Add(element);			
 		}
 
 		public void Remove(T element, bool recursively = false)
@@ -42,7 +54,7 @@ namespace Hollywood.Runtime.Internal
 				if (ParentToChildren.TryGetValue(element, out HashSet<T> elementChildren))
 				{
 					// Can't use foreach since Remove modifies elementChildren internally
-					while (elementChildren.Count > 0)
+					while (elementChildren.Any())
 					{
 						var child = elementChildren.First();
 						Remove(child, recursively);

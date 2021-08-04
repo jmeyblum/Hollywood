@@ -16,6 +16,7 @@ namespace Hollywood.Runtime
 	public interface IAdvancedInjectionContext : IInternalInjectionContext
 	{
 		T AddInstance<T>(object owner = null) where T : class;
+		void AddExternalInstance<T>(T instance, object owner = null, bool autoResolve = true) where T : class;
 		IEnumerable<T> AddInstances<T>(object owner = null) where T : class;
 		void ResolveInstance(object instance);
 		void ResolveInstances(IEnumerable instances);

@@ -1,6 +1,6 @@
 ﻿using Hollywood.Runtime;
+using Hollywood.Runtime.Observer;
 using Hollywood.Runtime.StateMachine;
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -42,7 +42,27 @@ public class LobbyState : IState
 
 }
 
-public sealed class ApplicationStateMachine : StateMachine<BootState> { }
+public class AnalyticEvent
+{
+    public string Message;
+}
+
+[InheritsFromInjectable]
+public sealed class ApplicationStateMachine : StateMachine<BootState>, IObserver<AnalyticEvent>
+{
+    [Needs]
+    private Hollywood.Runtime.ILogger logger;
+
+	public override Task Initialize(CancellationToken token)
+	{
+		return base.Initialize(token);
+	}
+
+	public void OnReceived(AnalyticEvent value)
+	{
+        logger.LogMessage($"from analytic: {value.Message}");
+	}
+}
 
 [Owns(typeof(PlayerModule))]
 [Owns(typeof(GameplayModule))]
@@ -160,13 +180,44 @@ public class AnalyticDispatcher
     private AnalyticThirdPartySystem _analyticThirdPartySystem;
 }
 
-public class AnalyticSystem
+[Owns(typeof(ObservableHandler<AnalyticEvent>))]
+public class AnalyticSystem : IObserver<StateMachineEvent>, IInitializable, IObservable<AnalyticEvent>
 {
     [Needs]
     private PlayerPreferencesSystem _playerPreferencesSystem;
 
     [Needs]
     private AnalyticDispatcher _analyticDispatcher;
+
+    [Needs]
+    private Hollywood.Runtime.ILogger _logger;
+
+    [Needs(ignoreInitialization: true)]
+    private ApplicationStateMachine _applicationStateMachine;
+
+    [Needs]
+    private ObservableHandler<AnalyticEvent> ObservableHandler;
+
+	public IUnsubscriber Subscribe(IObserver<AnalyticEvent> observer)
+	{
+        return ObservableHandler.Subscribe(observer);        
+    }
+
+	Task IInitializable.Initialize(CancellationToken token)
+	{
+        _applicationStateMachine.Subscribe(this);
+
+        Subscribe(_applicationStateMachine);
+
+        return Task.CompletedTask;
+    }
+
+	void IObserver<StateMachineEvent>.OnReceived(StateMachineEvent value)
+	{
+        _logger.LogMessage($"Sending analytic: {value.Type}");
+
+        ObservableHandler.Send(new AnalyticEvent() { Message = "Hello from the analytics!" });
+    }
 }
 
 public class LobbySystem : IInitializable

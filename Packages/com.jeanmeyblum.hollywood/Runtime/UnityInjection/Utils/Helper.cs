@@ -16,6 +16,9 @@ namespace Hollywood.Runtime.UnityInjection
 			SetupUnitySpecificImplementations();
 
 			Injector.InjectionContext = Hollywood.Runtime.Helper.CreateDefaultInjectionContext();
+
+			Injector.Advanced.AddExternalInstance<ILogger>(Log.Logger);
+			Injector.Advanced.AddExternalInstance<IAsserter>(Assert.Asserter);
 		}
 
 		/// <summary>

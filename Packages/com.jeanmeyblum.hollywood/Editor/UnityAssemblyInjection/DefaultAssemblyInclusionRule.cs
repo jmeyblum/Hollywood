@@ -14,7 +14,7 @@ namespace Hollywood.Editor.UnityAssemblyInjection
 			"Unity.",
 			"UnityEngine.",
 			"UnityEditor.",
-			"Hollywood."
+			"Hollywood.Editor"
 		};
 
 		public override bool IsIncluded(string assemblyPath)
