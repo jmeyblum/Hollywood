@@ -20,6 +20,10 @@ namespace Hollywood.Runtime
 		IEnumerable<T> AddInstances<T>(object owner = null) where T : class;
 		void ResolveInstance(object instance);
 		void ResolveInstances(IEnumerable instances);
+		void NotifyItemCreation(object instance);
+		void NotifyItemDestruction(object instance);
+		void RegisterItemObserver<T>(IItemObserver<T> observer) where T: class;
+		void UnregisterItemObserver<T>(IItemObserver<T> observer) where T : class;
 	}
 
 	public interface IInternalInjectionContext

@@ -15,6 +15,8 @@ namespace Hollywood.Runtime
 
 		private readonly Hierarchy<object> Instances = new Hierarchy<object>();
 		private readonly Dictionary<object, InstanceData> InstancesData = new Dictionary<object, InstanceData>();
+		private readonly Dictionary<Type, HashSet<object>> TypeToItemObservers = new Dictionary<Type, HashSet<object>>();
+		private readonly Dictionary<object, Dictionary<Type, ItemObserverData>> ItemObserversData = new Dictionary<object, Dictionary<Type, ItemObserverData>>();
 
 		public DefaultInjectionContext(ITypeResolver typeResolver, IInstanceCreator instanceCreator)
 		{
@@ -131,6 +133,11 @@ namespace Hollywood.Runtime
 			var instanceData = InstancesData[instance];
 			instanceData.TaskTokenSource.Cancel();
 
+			if (instance is __Hollywood_ItemObserver itemObserver)
+			{
+				itemObserver.__Unregister();
+			}
+
 			if (instance is IDisposable disposable)
 			{
 				disposable.Dispose();
@@ -151,7 +158,6 @@ namespace Hollywood.Runtime
 			Instances.Reset();
 			InstancesData.Clear();
 		}
-
 
 		void IInjectionContext.Dispose()
 		{
@@ -358,6 +364,11 @@ namespace Hollywood.Runtime
 					await initializable.Initialize(token);
 				}
 
+				if (instance is __Hollywood_ItemObserver itemObserver)
+				{
+					itemObserver.__Register();
+				}
+
 				if (instance is IUpdatable updatable)
 				{
 					CreateUpdatableTask(updatable);
@@ -426,6 +437,88 @@ namespace Hollywood.Runtime
 			foreach (var instance in instances)
 			{
 				((IInjectionContext)this).ResolveInstance(instance);
+			}
+		}
+
+		void IAdvancedInjectionContext.NotifyItemCreation(object instance)
+		{
+			foreach (var type in TypeResolver.GetAssignableTypes(instance.GetType()))
+			{
+				if (TypeToItemObservers.TryGetValue(type, out var observers))
+				{
+					foreach (var observer in observers)
+					{
+						try
+						{
+							ItemObserversData[observer][type].OnItemCreated(instance);
+						}
+						catch (Exception e)
+						{
+							Log.LogError(e);
+						}
+					}
+				}
+			}
+		}
+
+		void IAdvancedInjectionContext.NotifyItemDestruction(object instance)
+		{
+			foreach (var type in TypeResolver.GetAssignableTypes(instance.GetType()))
+			{
+				if (TypeToItemObservers.TryGetValue(type, out var observers))
+				{
+					foreach (var observer in observers)
+					{
+						try
+						{
+							ItemObserversData[observer][type].OnItemDestroyed(instance);
+						}
+						catch (Exception e)
+						{
+							Log.LogError(e);
+						}
+					}
+				}
+			}
+		}
+
+		void IAdvancedInjectionContext.RegisterItemObserver<T>(IItemObserver<T> observer)
+		{
+			var type = typeof(T);
+
+			if (!TypeToItemObservers.TryGetValue(type, out var observers))
+			{
+				observers = new HashSet<object>();
+				TypeToItemObservers[type] = observers;
+			}
+
+			observers.Add(observer);
+
+			if (!ItemObserversData.TryGetValue(observer, out var typeToItemObserverData)) {
+				typeToItemObserverData = new Dictionary<Type, ItemObserverData>();
+				ItemObserversData[observer] = typeToItemObserverData;
+			}
+
+			typeToItemObserverData[type] = new ItemObserverData<T>(observer);
+		}
+
+		void IAdvancedInjectionContext.UnregisterItemObserver<T>(IItemObserver<T> observer)
+		{
+			var type = typeof(T);
+
+			if (!TypeToItemObservers.TryGetValue(type, out var observers))
+			{
+				observers.Remove(observer);
+
+				if (!ItemObserversData.TryGetValue(observer, out var typeToItemObserverData))
+				{
+					typeToItemObserverData.Remove(type);
+
+					if (typeToItemObserverData.Count == 0)
+					{
+						ItemObserversData.Remove(observer);
+					}
+				}			
 			}
 		}
 

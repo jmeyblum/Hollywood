@@ -162,6 +162,34 @@ namespace Hollywood.Runtime
 
 				InjectionContext.ResolveInstances(instances);
 			}
+
+			public static void NotifyItemCreation(object instance)
+			{
+				Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
+
+				InjectionContext.NotifyItemCreation(instance);
+			}
+
+			public static void NotifyItemDestruction(object instance)
+			{
+				Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
+
+				InjectionContext.NotifyItemDestruction(instance);
+			}
+
+			public static void RegisterItemObserver<T>(IItemObserver<T> instance) where T : class
+			{
+				Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
+
+				InjectionContext.RegisterItemObserver(instance);
+			}
+
+			public static void UnregisterItemObserver<T>(IItemObserver<T> instance) where T : class
+			{
+				Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
+
+				InjectionContext.UnregisterItemObserver(instance);
+			}
 		}
 
 		public static class Internal

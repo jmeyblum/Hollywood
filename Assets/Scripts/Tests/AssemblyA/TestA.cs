@@ -14,10 +14,68 @@ public static class Application
     }
 }
 
-public class BootSystem : IUpdatable
+public class SomeItem : System.IDisposable
+{
+    public SomeItem()
+	{
+        Injector.Advanced.NotifyItemCreation(this);
+	}
+
+	public void Dispose()
+	{
+        Injector.Advanced.NotifyItemDestruction(this);
+    }
+}
+
+public class SomeOtherItem
+{
+
+}
+
+public class ExampleItemObserver : IItemObserver<SomeItem>, IItemObserver<SomeOtherItem>
+{
+	void IItemObserver<SomeItem>.OnItemCreated(SomeItem item)
+	{
+        UnityEngine.Debug.Log($"{nameof(SomeItem)} created");
+	}
+
+	void IItemObserver<SomeOtherItem>.OnItemCreated(SomeOtherItem item)
+	{
+        UnityEngine.Debug.Log($"{nameof(SomeOtherItem)} created");
+    }
+
+	void IItemObserver<SomeItem>.OnItemDestroyed(SomeItem item)
+	{
+        UnityEngine.Debug.Log($"{nameof(SomeItem)} destroyed");
+    }
+
+	void IItemObserver<SomeOtherItem>.OnItemDestroyed(SomeOtherItem item) 
+	{
+        UnityEngine.Debug.Log($"{nameof(SomeOtherItem)} destroyed");
+    }
+}
+
+public class BootSystem : IUpdatable, IInitializable, System.IDisposable
 {
     [Needs]
     private ApplicationStateMachine _stateMachine;
+
+    [Needs]
+    private ExampleItemObserver _exampleItemObserver;
+
+    private SomeItem _item;
+
+	public void Dispose()
+	{
+        _item.Dispose();
+	}
+
+	public Task Initialize(CancellationToken token)
+	{
+        _item = new SomeItem();
+
+        return Task.CompletedTask;
+	}
 
 	Task IUpdatable.Update(CancellationToken token)
 	{
@@ -68,6 +126,7 @@ public sealed class ApplicationStateMachine : StateMachine<BootState>, IObserver
 [Owns(typeof(GameplayModule))]
 [Owns(typeof(AnalyticModule))]
 [Owns(typeof(ApplicationStateMachine))]
+[Owns(typeof(ExampleItemObserver))]
 public class ApplicationModule : IModule
 {
 
@@ -209,7 +268,7 @@ public class AnalyticSystem : IObserver<StateMachineEvent>, IInitializable, IObs
 
         Subscribe(_applicationStateMachine);
 
-        return Task.CompletedTask;
+        return Task.CompletedTask; 
     }
 
 	void IObserver<StateMachineEvent>.OnReceived(StateMachineEvent value)

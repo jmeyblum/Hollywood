@@ -11,10 +11,13 @@ namespace Hollywood.Runtime
 	{
 		private static readonly Type IIgnoreAttributeType = typeof(IgnoreTypeAttribute);
 		private Dictionary<Type, HashSet<Type>> TypesMap = new Dictionary<Type, HashSet<Type>>();
+		private Dictionary<Type, HashSet<Type>> ClassTypesMap = new Dictionary<Type, HashSet<Type>>();
 
 		public DefaultTypeResolver()
 		{
 			var assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a => !a.IsDynamic);
+
+			HashSet<Type> classTypes = new HashSet<Type>();
 
 			foreach (var assembly in assemblies)
 			{
@@ -41,14 +44,49 @@ namespace Hollywood.Runtime
 
 							if (typeIndex > 0)
 							{
-								relatedType.Add(types[0]);
+								Type firstType = types[0];
+								relatedType.Add(firstType);
+
+								ClassTypesMap[firstType].Add(type);
 							}
 							else if (!type.IsInterface)
 							{
 								relatedType.Add(type);
+
+								if (!ClassTypesMap.TryGetValue(type, out HashSet<Type> relatedInterfaceType))
+								{
+									relatedInterfaceType = new HashSet<Type>();
+									ClassTypesMap.Add(type, relatedInterfaceType);
+								}
+
+								relatedInterfaceType.Add(type);
+								classTypes.Add(type);
 							}
 						}
 					}
+				}
+			}
+
+			HashSet<Type> childs = new HashSet<Type>();
+
+			foreach (var classType in classTypes)
+			{
+				childs.Clear();
+				Type baseType = classType.BaseType;
+				childs.Add(classType);
+
+				while (baseType != null)
+				{
+					if (!ClassTypesMap.TryGetValue(baseType, out HashSet<Type> relatedChildType))
+					{
+						relatedChildType = new HashSet<Type>();
+						ClassTypesMap.Add(baseType, relatedChildType);
+					}
+
+					relatedChildType.UnionWith(childs);
+
+					childs.Add(baseType);
+					baseType = baseType.BaseType;
 				}
 			}
 
@@ -108,16 +146,23 @@ namespace Hollywood.Runtime
 
 		Type ITypeResolver.Get<T>()
 		{
-			Assert.IsTrue(TypesMap.TryGetValue(typeof(T), out var types) && types.Count == 1);
+			Assert.IsTrue(TypesMap.TryGetValue(typeof(T), out var types) && types.Count == 1, $"Issue resolving type for {typeof(T)}");
 
 			return TypesMap[typeof(T)].First();
 		}
 
 		IEnumerable<Type> ITypeResolver.GetAll<T>()
 		{
-			Assert.IsTrue(TypesMap.TryGetValue(typeof(T), out var types) && types.Count > 0);
+			Assert.IsTrue(TypesMap.TryGetValue(typeof(T), out var types) && types.Count > 0, $"Issue resolving types for {typeof(T)}");
 
 			return TypesMap[typeof(T)];
+		}
+
+		IEnumerable<Type> ITypeResolver.GetAssignableTypes(Type type)
+		{
+			Assert.IsTrue(ClassTypesMap.TryGetValue(type, out var types) && types.Count > 0, $"Issue getting assignable types for {type}");
+
+			return ClassTypesMap[type];
 		}
 
 		void ITypeResolver.Reset()

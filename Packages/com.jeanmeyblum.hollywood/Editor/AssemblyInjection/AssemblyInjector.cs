@@ -20,8 +20,10 @@ namespace Hollywood.Editor.AssemblyInjection
 		internal static readonly Type InheritsFromInjectableAttributeType = typeof(InheritsFromInjectableAttribute);
 		internal static readonly Type IncludeTypeAttributeType = typeof(IncludeTypeAttribute);
 		internal static readonly Type IgnoreTypeAttributeType = typeof(IgnoreTypeAttribute);
+		internal static readonly Type IItemObserverGenericType = typeof(IItemObserver<>);
 
 		private static readonly Type HollywoodInjectedType = typeof(__Hollywood_Injected);
+		private static readonly Type HollywoodItemObserverType = typeof(__Hollywood_ItemObserver);
 
 		private const System.Reflection.BindingFlags StaticBindingFlags = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
 		private const System.Reflection.BindingFlags InstanceBindingFlags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
@@ -34,6 +36,9 @@ namespace Hollywood.Editor.AssemblyInjection
 		private static readonly System.Reflection.MethodInfo ResolveOwnedInstancesMethod = typeof(Injector.Internal).GetMethod(nameof(Injector.Internal.ResolveOwnedInstances), StaticBindingFlags);
 		private static readonly System.Reflection.MethodInfo DisposeOwnedInstancesMethod = typeof(Injector.Internal).GetMethod(nameof(Injector.Internal.DisposeOwnedInstances), StaticBindingFlags);
 
+		private static readonly System.Reflection.MethodInfo InjectorRegisterItemObserverMethod = typeof(Injector.Advanced).GetMethod(nameof(Injector.Advanced.RegisterItemObserver), StaticBindingFlags);
+		private static readonly System.Reflection.MethodInfo InjectorUnregisterItemObserverMethod = typeof(Injector.Advanced).GetMethod(nameof(Injector.Advanced.UnregisterItemObserver), StaticBindingFlags);
+
 		private readonly string ResolveProtectedMethodName;
 
 		private readonly AssemblyDefinition AssemblyDefinition;
@@ -44,6 +49,13 @@ namespace Hollywood.Editor.AssemblyInjection
 		private readonly MethodReference ResolveInterfaceMethod;
 
 		private readonly MethodReference FindDependencyGenericMethodReference;
+
+		private readonly InterfaceImplementation HollywoodItemObserverTypeImplementation;
+		private readonly MethodReference RegisterItemObserverMethod;
+		private readonly MethodReference UnregisterItemObserverMethod;
+
+		private readonly MethodReference InjectorRegisterItemObserverMethodReference;
+		private readonly MethodReference InjectorUnregisterItemObserverMethodReference;
 
 		private readonly TypeReference VoidType;
 		private readonly TypeReference ObjectType;
@@ -65,8 +77,16 @@ namespace Hollywood.Editor.AssemblyInjection
 
 			// For Injected
 			HollywoodInjectedTypeImplementation = new InterfaceImplementation(AssemblyDefinition.MainModule.ImportReference(HollywoodInjectedType));
-			ResolveInterfaceMethod = AssemblyDefinition.MainModule.ImportReference(typeof(__Hollywood_Injected).GetMethod(nameof(__Hollywood_Injected.__Resolve), InstanceBindingFlags));
+			ResolveInterfaceMethod = AssemblyDefinition.MainModule.ImportReference(HollywoodInjectedType.GetMethod(nameof(__Hollywood_Injected.__Resolve), InstanceBindingFlags));
 			FindDependencyGenericMethodReference = AssemblyDefinition.MainModule.ImportReference(FindDependencyMethod);
+
+			// For ItemObserver
+			HollywoodItemObserverTypeImplementation = new InterfaceImplementation(AssemblyDefinition.MainModule.ImportReference(HollywoodItemObserverType));
+			RegisterItemObserverMethod = AssemblyDefinition.MainModule.ImportReference(HollywoodItemObserverType.GetMethod(nameof(__Hollywood_ItemObserver.__Register), InstanceBindingFlags));
+			UnregisterItemObserverMethod = AssemblyDefinition.MainModule.ImportReference(HollywoodItemObserverType.GetMethod(nameof(__Hollywood_ItemObserver.__Unregister), InstanceBindingFlags));
+
+			InjectorRegisterItemObserverMethodReference = AssemblyDefinition.MainModule.ImportReference(InjectorRegisterItemObserverMethod);
+			InjectorUnregisterItemObserverMethodReference = AssemblyDefinition.MainModule.ImportReference(InjectorUnregisterItemObserverMethod);
 
 			VoidType = AssemblyDefinition.MainModule.ImportReference(typeof(void));
 			ObjectType = AssemblyDefinition.MainModule.ImportReference(typeof(System.Object));
@@ -92,7 +112,7 @@ namespace Hollywood.Editor.AssemblyInjection
 		{
 			Inject(injectionData.InjectableTypes);
 
-			Inject(injectionData.InjectedTypes);
+			Inject(injectionData.InjectedTypes.Where(t => !t.IsGenericParameter));
 		}
 
 		private void Inject(IEnumerable<InjectableType> injectableTypes)
@@ -121,7 +141,19 @@ namespace Hollywood.Editor.AssemblyInjection
 				InjectIOwner(injectableType);
 			}
 
-			InjectHollywoodInjected(injectableType, isOwner);
+			bool hasNeeds = injectableType.NeededTypes.Count > 0;
+
+			if (hasNeeds || isOwner)
+			{
+				InjectHollywoodInjected(injectableType, isOwner);
+			}
+
+			bool isItemObserver = injectableType.ObservedTypes.Count > 0;
+
+			if (isItemObserver)
+			{
+				InjectItemObserver(injectableType);
+			}
 		}
 
 		private void InjectIOwner(InjectableType injectableType)
@@ -342,6 +374,43 @@ namespace Hollywood.Editor.AssemblyInjection
 			}
 		}
 
+		private void InjectItemObserver(InjectableType injectableType)
+		{
+			injectableType.Type.Interfaces.Add(HollywoodItemObserverTypeImplementation);
+
+			AddHollywoodItemObserverMethod(injectableType, RegisterItemObserverMethod, InjectorRegisterItemObserverMethodReference);
+			AddHollywoodItemObserverMethod(injectableType, UnregisterItemObserverMethod, InjectorUnregisterItemObserverMethodReference);
+		}
+
+		private void AddHollywoodItemObserverMethod(InjectableType injectableType, MethodReference interfaceMethod, MethodReference injectorMethod)
+		{
+			MethodDefinition interfaceMethodDefinition = new MethodDefinition($"{interfaceMethod.DeclaringType}.{interfaceMethod.Name}",
+				MethodAttributes.Private |
+				MethodAttributes.Final |
+				MethodAttributes.HideBySig |
+				MethodAttributes.Virtual |
+				MethodAttributes.NewSlot,
+				VoidType);
+
+			interfaceMethodDefinition.Overrides.Add(interfaceMethod);
+
+			interfaceMethodDefinition.Body.Instructions.Add(Instruction.Create(OpCodes.Nop));
+
+			foreach (var observedType in injectableType.ObservedTypes)
+			{
+				var injectorGenericMethod = new GenericInstanceMethod(injectorMethod);
+				injectorGenericMethod.GenericArguments.Add(observedType);
+
+				interfaceMethodDefinition.Body.Instructions.Add(Instruction.Create(OpCodes.Ldarg_0));
+				interfaceMethodDefinition.Body.Instructions.Add(Instruction.Create(OpCodes.Call, injectorGenericMethod));
+				interfaceMethodDefinition.Body.Instructions.Add(Instruction.Create(OpCodes.Nop));
+			}
+
+			interfaceMethodDefinition.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));
+
+			injectableType.Type.Methods.Add(interfaceMethodDefinition);
+		}
+
 		private void Inject(IEnumerable<TypeReference> injectedTypes)
 		{
 			if (injectedTypes.Count() == 0)
@@ -384,7 +453,7 @@ namespace Hollywood.Editor.AssemblyInjection
 					var interfaces = typeDefinition.Interfaces;
 
 					instructions.Add(CreatePushIntToStackInstruction(interfaces.Count + 1));
-					instructions.Add(Instruction.Create(OpCodes.Newarr, TypeType));	
+					instructions.Add(Instruction.Create(OpCodes.Newarr, TypeType));
 
 					AddTypeToArray(instructions, 0, arrayValue);
 

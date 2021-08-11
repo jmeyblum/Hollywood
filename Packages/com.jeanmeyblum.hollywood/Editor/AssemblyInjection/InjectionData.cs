@@ -30,7 +30,7 @@ namespace Hollywood.Editor.AssemblyInjection
 				var ownsAttributes = typeDefinition.CustomAttributes.Where(attribute => attribute.AttributeType.FullName == AssemblyInjector.OwnsAttributeType.FullName);
 				if (ownsAttributes.Any())
 				{
-					injectableType = injectableType ?? new InjectableType(typeDefinition);
+					injectableType ??= new InjectableType(typeDefinition);
 
 					foreach (var ownsAttribute in ownsAttributes)
 					{
@@ -44,7 +44,7 @@ namespace Hollywood.Editor.AssemblyInjection
 				var ownsAllAttributes = typeDefinition.CustomAttributes.Where(attribute => attribute.AttributeType.FullName == AssemblyInjector.OwnsAllAttributeType.FullName);
 				if (ownsAllAttributes.Any())
 				{
-					injectableType = injectableType ?? new InjectableType(typeDefinition);
+					injectableType ??= new InjectableType(typeDefinition);
 
 					foreach (var ownsAllAttribute in ownsAllAttributes)
 					{
@@ -58,7 +58,7 @@ namespace Hollywood.Editor.AssemblyInjection
 				var neededFields = typeDefinition.Fields.Where(f => f.CustomAttributes.Any(a => a.AttributeType.FullName == AssemblyInjector.NeedsAttributeType.FullName));
 				if (neededFields.Any())
 				{
-					injectableType = injectableType ?? new InjectableType(typeDefinition);
+					injectableType ??= new InjectableType(typeDefinition);
 
 					foreach (var neededField in neededFields)
 					{
@@ -70,6 +70,18 @@ namespace Hollywood.Editor.AssemblyInjection
 						injectableType.NeededTypes.Add(neededField, (neededType, ignoreInitialization));
 						injectedTypes.Add(neededType);
 					}
+				}
+
+				var observedTypes = typeDefinition.Interfaces
+					.Where(i => i.InterfaceType is GenericInstanceType genericInstanceType &&
+						genericInstanceType.HasGenericArguments &&
+						genericInstanceType.ElementType.FullName == AssemblyInjector.IItemObserverGenericType.FullName)
+					.Select(i => (i.InterfaceType as GenericInstanceType).GenericArguments[0]);
+				if(observedTypes.Any())
+				{
+					injectableType ??= new InjectableType(typeDefinition);
+					injectableType.ObservedTypes.UnionWith(observedTypes);
+					injectedTypes.UnionWith(observedTypes);
 				}
 
 				foreach (var method in typeDefinition.Methods)

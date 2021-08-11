@@ -7,6 +7,7 @@ namespace Hollywood.Runtime
 	{
 		Type Get<T>();
 		IEnumerable<Type> GetAll<T>();
+		IEnumerable<Type> GetAssignableTypes(Type type);
 		void Reset();
 	}
 }
