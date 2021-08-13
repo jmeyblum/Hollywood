@@ -3,6 +3,13 @@ using System.Collections.Generic;
 
 namespace Hollywood.Runtime.Observer
 {
+	/// <summary>
+	/// System usually owned and needed by an IObservable system to delegate the implementation
+	/// of the observable pattern.
+	/// The main IObservable can redirect the Subscribe call to this object Subscribe method and use 
+	/// this object Send method to notify observers.
+	/// </summary>
+	/// <typeparam name="T"></typeparam>
 	public class ObservableHandler<T> : IObservable<T> where T : class
 	{
 		[Needs]
@@ -29,6 +36,8 @@ namespace Hollywood.Runtime.Observer
 		private readonly List<IObserver<T>> Observers = new List<IObserver<T>>();
 		private readonly List<IObserver<T>> ObserversToAdd = new List<IObserver<T>>();
 		private readonly List<IObserver<T>> ObserversToRemove = new List<IObserver<T>>();
+
+		private ObservableHandler() { }
 
 		public IUnsubscriber Subscribe(IObserver<T> observer)
 		{

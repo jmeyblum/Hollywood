@@ -79,14 +79,17 @@ public class BootSystem : IUpdatable, IInitializable, System.IDisposable
         return Task.CompletedTask;
 	}
 
-	Task IUpdatable.Update(CancellationToken token)
+	async Task IUpdatable.Update(CancellationToken token)
 	{
-        if (Input.GetKeyDown(KeyCode.A))
+        while (!token.IsCancellationRequested)
         {
-            _stateMachine.TransitionTo<LobbyState>();
-        }
+            if (Input.GetKeyDown(KeyCode.A))
+            {
+                _stateMachine.TransitionTo<LobbyState>();
+            }
 
-        return Task.CompletedTask;
+            await Task.Yield();
+        }
     }
 }
 

@@ -2,6 +2,9 @@
 
 namespace Hollywood.Runtime
 {
+	/// <summary>
+	/// Class attribute to make this class instance owns an instance of the specified type.
+	/// </summary>
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 	public class OwnsAttribute : Attribute
 	{

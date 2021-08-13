@@ -5,11 +5,8 @@ using System.Linq;
 
 namespace Hollywood.Runtime
 {
-	// TODO: add settings to have a list of ignored assemblies
-
 	public class DefaultTypeResolver : ITypeResolver
 	{
-		private static readonly Type IIgnoreAttributeType = typeof(IgnoreTypeAttribute);
 		private Dictionary<Type, HashSet<Type>> TypesMap = new Dictionary<Type, HashSet<Type>>();
 		private Dictionary<Type, HashSet<Type>> ClassTypesMap = new Dictionary<Type, HashSet<Type>>();
 
@@ -21,6 +18,11 @@ namespace Hollywood.Runtime
 
 			foreach (var assembly in assemblies)
 			{
+				if(!assembly.GetCustomAttributes(typeof(__Hollywood_PostProcessedAttribute), false).Any())
+				{
+					continue;
+				}
+
 				var injectedTypesTypeName = string.Format(Constants.DefaultTypeResolver.TypeNameTemplate, assembly.Modules.First().Name);
 
 				var injectedTypesType = assembly.GetType(injectedTypesTypeName, throwOnError: false);

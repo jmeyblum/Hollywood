@@ -31,6 +31,7 @@ namespace Hollywood.Editor.UnityAssemblyInjection
 
 			Inject(injectionData as InjectionData);
 			Inject(injectionData);
+			MarkAssemblyAsInjected();
 		}
 
 		protected void Inject(UnityInjectionData injectionData)

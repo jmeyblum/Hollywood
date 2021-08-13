@@ -28,6 +28,8 @@ namespace Hollywood.Editor.AssemblyInjection
 		private static readonly Type HollywoodInjectedType = typeof(__Hollywood_Injected);
 		private static readonly Type HollywoodItemObserverType = typeof(__Hollywood_ItemObserver);
 
+		private static readonly Type HollywoodPostProcessed = typeof(__Hollywood_PostProcessedAttribute);
+
 		internal const System.Reflection.BindingFlags StaticBindingFlags = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
 		internal const System.Reflection.BindingFlags InstanceBindingFlags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
 
@@ -36,8 +38,8 @@ namespace Hollywood.Editor.AssemblyInjection
 
 		private static readonly System.Reflection.MethodInfo FindDependencyMethod = typeof(Injector).GetMethod(nameof(Injector.FindDependency), StaticBindingFlags);
 
-		private static readonly System.Reflection.MethodInfo InjectorRegisterItemObserverMethod = typeof(Injector.Advanced).GetMethod(nameof(Injector.Advanced.RegisterItemObserver), StaticBindingFlags);
-		private static readonly System.Reflection.MethodInfo InjectorUnregisterItemObserverMethod = typeof(Injector.Advanced).GetMethod(nameof(Injector.Advanced.UnregisterItemObserver), StaticBindingFlags);
+		private static readonly System.Reflection.MethodInfo InjectorRegisterItemObserverMethod = typeof(Injector.Internal).GetMethod(nameof(Injector.Internal.RegisterItemObserver), StaticBindingFlags);
+		private static readonly System.Reflection.MethodInfo InjectorUnregisterItemObserverMethod = typeof(Injector.Internal).GetMethod(nameof(Injector.Internal.UnregisterItemObserver), StaticBindingFlags);
 
 		private readonly string ResolveProtectedMethodName;
 
@@ -56,6 +58,8 @@ namespace Hollywood.Editor.AssemblyInjection
 		private readonly MethodReference InjectorRegisterItemObserverMethodReference;
 		private readonly MethodReference InjectorUnregisterItemObserverMethodReference;
 
+		private readonly MethodReference HollywoodPostProcessedConstructorReference;
+
 		internal readonly TypeReference VoidType;
 		internal readonly TypeReference ObjectType;
 		internal readonly TypeReference TypeType;
@@ -70,6 +74,13 @@ namespace Hollywood.Editor.AssemblyInjection
 		protected AssemblyInjector(AssemblyDefinition assemblyDefinition)
 		{
 			AssemblyDefinition = assemblyDefinition;
+
+			if (AssemblyDefinition.CustomAttributes.Any(c => c.AttributeType.FullName == HollywoodPostProcessed.FullName))
+			{
+				Result = InjectionResult.Failed;
+
+				throw new InvalidOperationException($"Assembly {assemblyDefinition.Name} was already injected!");
+			}
 
 			// For Owners
 			InjectorAddInstanceMethodReference = AssemblyDefinition.MainModule.ImportReference(InjectorAddInstanceMethod);
@@ -87,6 +98,8 @@ namespace Hollywood.Editor.AssemblyInjection
 
 			InjectorRegisterItemObserverMethodReference = AssemblyDefinition.MainModule.ImportReference(InjectorRegisterItemObserverMethod);
 			InjectorUnregisterItemObserverMethodReference = AssemblyDefinition.MainModule.ImportReference(InjectorUnregisterItemObserverMethod);
+
+			HollywoodPostProcessedConstructorReference = AssemblyDefinition.MainModule.ImportReference(HollywoodPostProcessed.GetConstructor(Type.EmptyTypes));
 
 			VoidType = AssemblyDefinition.MainModule.ImportReference(typeof(void));
 			ObjectType = AssemblyDefinition.MainModule.ImportReference(typeof(System.Object));
@@ -106,6 +119,16 @@ namespace Hollywood.Editor.AssemblyInjection
 			var injectionData = new InjectionData(AssemblyDefinition.MainModule);
 
 			Inject(injectionData);
+			MarkAssemblyAsInjected();
+		}
+
+		protected void MarkAssemblyAsInjected()
+		{
+			if (Result == InjectionResult.Modified && !AssemblyDefinition.CustomAttributes.Any(c => c.AttributeType.FullName == HollywoodPostProcessed.FullName))
+			{
+				var attribute = new CustomAttribute(HollywoodPostProcessedConstructorReference);
+				AssemblyDefinition.CustomAttributes.Add(attribute);
+			}
 		}
 
 		protected void Inject(InjectionData injectionData)

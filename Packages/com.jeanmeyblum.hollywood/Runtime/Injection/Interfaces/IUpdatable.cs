@@ -3,6 +3,10 @@ using System.Threading.Tasks;
 
 namespace Hollywood.Runtime
 {
+	/// <summary>
+	/// Interface that an injected system can implement which will be started 
+	/// after the system is fully initialized.
+	/// </summary>
 	public interface IUpdatable
 	{
 		Task Update(CancellationToken token);

@@ -2,14 +2,17 @@
 
 namespace Hollywood.Runtime
 {
+	/// <summary>
+	/// Class attribute to make this class instance owns all types assignable for the specified type.
+	/// </summary>
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 	public class OwnsAllAttribute : Attribute
 	{
-		private readonly Type _interfaceType;
+		private readonly Type _ownedType;
 
-		public OwnsAllAttribute(Type interfaceType)
+		public OwnsAllAttribute(Type ownedType)
 		{
-			_interfaceType = interfaceType;
+			_ownedType = ownedType;
 		}
 	}
 }

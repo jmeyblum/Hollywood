@@ -3,16 +3,6 @@ using System.Collections.Generic;
 
 namespace Hollywood.Runtime
 {
-	// TODO: Test performance of reflection calls
-	// TODO: Add callbacks for system events (dependency types not found...)
-	// TODO: Needs All
-	// TODO: Named instances
-	// TODO: Supports GameObject?
-	// TODO: Parenting of existing external instance
-	// TODO: Instances tree visualization
-	// TODO: injectionContext should set himself as the current static one when used (to support editor scenario)
-	// TODO: add more logging 
-
 	public static class Injector
 	{
 		public static IInjectionContext InjectionContext;
@@ -29,7 +19,7 @@ namespace Hollywood.Runtime
 		{
 			Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
 
-			return InjectionContext.FindDependency<T>(instance, ignoreInitialization);
+			return InjectionContext?.FindDependency<T>(instance, ignoreInitialization);
 		}
 
 		/// <summary>
@@ -46,7 +36,7 @@ namespace Hollywood.Runtime
 		{
 			Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
 
-			return InjectionContext.GetInstance<T>(owner);
+			return InjectionContext?.GetInstance<T>(owner);
 		}
 
 		/// <summary>
@@ -63,28 +53,33 @@ namespace Hollywood.Runtime
 		{
 			Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
 
-			return InjectionContext.GetInstances<T>(owner);
+			return InjectionContext?.GetInstances<T>(owner);
 		}
 
 		/// <summary>
 		/// Dispose this instance and all owned instances.
-		/// This is usually called by the instance IDisposable.Dispose() method.
 		/// </summary>
 		/// <param name="instance"></param>
 		public static void DisposeInstance(object instance)
 		{
 			Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
 
-			InjectionContext.DisposeInstance(instance);
+			InjectionContext?.DisposeInstance(instance);
 		}
 
+		/// <summary>
+		/// Resets the current injection context which will dispose of all systems created with it.
+		/// </summary>
 		public static void Reset()
 		{
 			Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
 
-			InjectionContext.Reset();
+			InjectionContext?.Reset();
 		}
 
+		/// <summary>
+		/// Disposes the current injection context which will dispose of all systems created with it and discard the injection context.
+		/// </summary>
 		public static void Dispose()
 		{
 			InjectionContext?.Reset();
@@ -107,7 +102,7 @@ namespace Hollywood.Runtime
 			{
 				Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
 
-				return InjectionContext.AddInstance<T>(owner);
+				return InjectionContext?.AddInstance<T>(owner);
 			}
 
 			/// <summary>
@@ -122,7 +117,7 @@ namespace Hollywood.Runtime
 			{
 				Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
 
-				InjectionContext.AddExternalInstance<T>(instance, owner, autoResolve);
+				InjectionContext?.AddExternalInstance<T>(instance, owner, autoResolve);
 			}
 
 			/// <summary>
@@ -138,7 +133,7 @@ namespace Hollywood.Runtime
 			{
 				Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
 
-				return InjectionContext.AddInstances<T>(owner);
+				return InjectionContext?.AddInstances<T>(owner);
 			}
 
 			/// <summary>
@@ -149,7 +144,7 @@ namespace Hollywood.Runtime
 			{
 				Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
 
-				InjectionContext.ResolveInstance(instance);
+				InjectionContext?.ResolveInstance(instance);
 			}
 
 			/// <summary>
@@ -160,52 +155,60 @@ namespace Hollywood.Runtime
 			{
 				Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
 
-				InjectionContext.ResolveInstances(instances);
+				InjectionContext?.ResolveInstances(instances);
 			}
 
+			/// <summary>
+			/// Notifies item creation for compatible and existing IItemObserver known by the injection system.
+			/// </summary>
+			/// <param name="instance"></param>
 			public static void NotifyItemCreation(object instance)
 			{
 				Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
 
-				InjectionContext.NotifyItemCreation(instance);
+				InjectionContext?.NotifyItemCreation(instance);
 			}
 
+			/// <summary>
+			/// Notifies item destruction for compatible and existing IItemObserver known by the injection system.
+			/// </summary>
+			/// <param name="instance"></param>
 			public static void NotifyItemDestruction(object instance)
 			{
 				Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
 
-				InjectionContext.NotifyItemDestruction(instance);
+				InjectionContext?.NotifyItemDestruction(instance);
 			}
+		}
 
+		public static class Internal
+		{
 			public static void RegisterItemObserver<T>(IItemObserver<T> instance) where T : class
 			{
 				Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
 
-				InjectionContext.RegisterItemObserver(instance);
+				InjectionContext?.RegisterItemObserver(instance);
 			}
 
 			public static void UnregisterItemObserver<T>(IItemObserver<T> instance) where T : class
 			{
 				Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
 
-				InjectionContext.UnregisterItemObserver(instance);
+				InjectionContext?.UnregisterItemObserver(instance);
 			}
-		}
 
-		public static class Internal
-		{
 			public static void ResolveOwnedInstances(object owner)
 			{
 				Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
 
-				InjectionContext.ResolveOwnedInstances(owner);
+				InjectionContext?.ResolveOwnedInstances(owner);
 			}
 
 			public static void DisposeOwnedInstances(object owner)
 			{
 				Assert.IsNotNull(InjectionContext, $"No {nameof(InjectionContext)} defined.");
 
-				InjectionContext.DisposeOwnedInstances(owner);
+				InjectionContext?.DisposeOwnedInstances(owner);
 			}
 		}
 	}

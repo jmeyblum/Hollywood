@@ -2,6 +2,10 @@
 
 namespace Hollywood.Runtime
 {
+	/// <summary>
+	/// Field attribute used to automatically resolve a dependency to a system existing at the same level or higher in the hierarchy 
+	/// where this enclosing system instance is owned.
+	/// </summary>
 	[AttributeUsage(AttributeTargets.Field)]
 	public class NeedsAttribute : Attribute
 	{

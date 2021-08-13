@@ -1,5 +1,8 @@
 ﻿namespace Hollywood.Runtime
 {
+	/// <summary>
+	/// Interface used by the injection system to log messages.
+	/// </summary>
 	public interface ILogger
 	{
 		void LogTrace(object message);

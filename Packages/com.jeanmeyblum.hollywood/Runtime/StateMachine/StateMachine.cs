@@ -5,6 +5,12 @@ using System.Threading.Tasks;
 
 namespace Hollywood.Runtime.StateMachine
 {
+	/// <summary>
+	/// A flat state machine that can transitioned from state to state.
+	/// When transitioning to a new state the old state gets disposed as well its owned systems
+	/// and the new state get injected and is owned by the state machine.
+	/// </summary>
+	/// <typeparam name="TInitialState"></typeparam>
 	[Owns(typeof(ObservableHandler<StateMachineEvent>))]
 	public class StateMachine<TInitialState> : IInitializable, Observer.IObservable<StateMachineEvent> where TInitialState : class, IState
 	{

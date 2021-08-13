@@ -22,13 +22,13 @@ namespace Hollywood.Runtime
 		void ResolveInstances(IEnumerable instances);
 		void NotifyItemCreation(object instance);
 		void NotifyItemDestruction(object instance);
-		void RegisterItemObserver<T>(IItemObserver<T> observer) where T: class;
-		void UnregisterItemObserver<T>(IItemObserver<T> observer) where T : class;
 	}
 
 	public interface IInternalInjectionContext
 	{
 		void ResolveOwnedInstances(object owner);
 		void DisposeOwnedInstances(object owner);
+		void RegisterItemObserver<T>(IItemObserver<T> observer) where T : class;
+		void UnregisterItemObserver<T>(IItemObserver<T> observer) where T : class;
 	}
 }

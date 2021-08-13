@@ -133,17 +133,34 @@ namespace Hollywood.Runtime
 			var instanceData = InstancesData[instance];
 			instanceData.TaskTokenSource.Cancel();
 
-			if (instance is __Hollywood_ItemObserver itemObserver)
+			IInjectionContext previousInjectionContext = Injector.InjectionContext;
+			try
 			{
-				itemObserver.__Unregister();
-			}
+				Injector.InjectionContext = this;
 
-			if (instance is IDisposable disposable)
+				if (instance is __Hollywood_ItemObserver itemObserver)
+				{
+					itemObserver.__Unregister();
+				}
+
+				if (instance is IDisposable disposable)
+				{
+					try
+					{
+						disposable.Dispose();
+					}
+					catch(Exception e)
+					{
+						Log.LogError(e);
+					}
+				}
+			
+				((IInternalInjectionContext)this).DisposeOwnedInstances(instance);
+			}
+			finally
 			{
-				disposable.Dispose();
+				Injector.InjectionContext = previousInjectionContext;
 			}
-
-			((IInternalInjectionContext)this).DisposeOwnedInstances(instance);
 
 			Instances.Remove(instance, recursively: false);
 			InstancesData.Remove(instance);
@@ -157,6 +174,8 @@ namespace Hollywood.Runtime
 			InstanceCreator.Reset();
 			Instances.Reset();
 			InstancesData.Clear();
+			TypeToItemObservers.Clear();
+			ItemObserversData.Clear();
 		}
 
 		void IInjectionContext.Dispose()
@@ -268,16 +287,33 @@ namespace Hollywood.Runtime
 
 			instanceData.State = InstanceState.Resolving;
 
-			if (instance is __Hollywood_Injected injected)
+			IInjectionContext previousInjectionContext = Injector.InjectionContext;
+			try
 			{
-				injected.__Resolve();
-			}
+				Injector.InjectionContext = this;
 
-			((IInternalInjectionContext)this).ResolveOwnedInstances(instance);
-			
-			if (instance is IResolvable resolvable)
+				if (instance is __Hollywood_Injected injected)
+				{
+					injected.__Resolve();
+				}
+
+				((IInternalInjectionContext)this).ResolveOwnedInstances(instance);
+
+				if (instance is IResolvable resolvable)
+				{
+					try
+					{
+						resolvable.Resolve();
+					}
+					catch(Exception e)
+					{
+						Log.LogError(e);
+					}
+				}
+			}
+			finally
 			{
-				resolvable.Resolve();
+				Injector.InjectionContext = previousInjectionContext;
 			}
 
 			instanceData.State = InstanceState.Initializing;
@@ -299,6 +335,8 @@ namespace Hollywood.Runtime
 					token.ThrowIfCancellationRequested();
 				}
 			}
+			catch (TaskCanceledException) { }
+			catch (OperationCanceledException) { }
 			catch (Exception e)
 			{
 				Log.LogFatalError(e);
@@ -361,22 +399,43 @@ namespace Hollywood.Runtime
 
 				if (instance is IInitializable initializable)
 				{
-					await initializable.Initialize(token);
+					try
+					{
+						await initializable.Initialize(token);
+					}
+					catch (TaskCanceledException) { }
+					catch (OperationCanceledException) { }
+					catch (Exception e)
+					{
+						Log.LogError(e);
+					}
 				}
 
-				if (instance is __Hollywood_ItemObserver itemObserver)
+				IInjectionContext previousInjectionContext = Injector.InjectionContext;
+				try
 				{
-					itemObserver.__Register();
-				}
+					Injector.InjectionContext = this;
 
-				if (instance is IUpdatable updatable)
+					if (instance is __Hollywood_ItemObserver itemObserver)
+					{
+						itemObserver.__Register();
+					}
+
+					if (instance is IUpdatable updatable)
+					{
+						CreateUpdatableTask(updatable);
+					}
+				}
+				finally
 				{
-					CreateUpdatableTask(updatable);
+					Injector.InjectionContext = previousInjectionContext;
 				}
 
 				instanceData.State = InstanceState.Initialized;
-			} 
-			catch(Exception e)
+			}
+			catch (TaskCanceledException) { }
+			catch (OperationCanceledException) { }
+			catch (Exception e)
 			{
 				Log.LogFatalError(e);
 			}
@@ -418,13 +477,11 @@ namespace Hollywood.Runtime
 
 				var token = instanceData.TaskTokenSource.Token;
 
-				while (!token.IsCancellationRequested)
-				{
-					await instance.Update(token);
-					await Task.Yield();
-				}
+				await instance.Update(token);
 			}
-			catch(Exception e)
+			catch (TaskCanceledException) { }
+			catch (OperationCanceledException) { }
+			catch (Exception e)
 			{
 				Log.LogError(e);
 			}
@@ -482,46 +539,6 @@ namespace Hollywood.Runtime
 			}
 		}
 
-		void IAdvancedInjectionContext.RegisterItemObserver<T>(IItemObserver<T> observer)
-		{
-			var type = typeof(T);
-
-			if (!TypeToItemObservers.TryGetValue(type, out var observers))
-			{
-				observers = new HashSet<object>();
-				TypeToItemObservers[type] = observers;
-			}
-
-			observers.Add(observer);
-
-			if (!ItemObserversData.TryGetValue(observer, out var typeToItemObserverData)) {
-				typeToItemObserverData = new Dictionary<Type, ItemObserverData>();
-				ItemObserversData[observer] = typeToItemObserverData;
-			}
-
-			typeToItemObserverData[type] = new ItemObserverData<T>(observer);
-		}
-
-		void IAdvancedInjectionContext.UnregisterItemObserver<T>(IItemObserver<T> observer)
-		{
-			var type = typeof(T);
-
-			if (!TypeToItemObservers.TryGetValue(type, out var observers))
-			{
-				observers.Remove(observer);
-
-				if (!ItemObserversData.TryGetValue(observer, out var typeToItemObserverData))
-				{
-					typeToItemObserverData.Remove(type);
-
-					if (typeToItemObserverData.Count == 0)
-					{
-						ItemObserversData.Remove(observer);
-					}
-				}			
-			}
-		}
-
 		void IInternalInjectionContext.ResolveOwnedInstances(object owner)
 		{
 			Assert.IsTrue(Instances.Contains(owner), $"{owner} is unknown from this {nameof(IInjectionContext)}: {this}.");
@@ -541,6 +558,47 @@ namespace Hollywood.Runtime
 				var child = Instances.GetChildren(owner).First();
 
 				((IInjectionContext)this).DisposeInstance(child);
+			}
+		}
+
+		void IInternalInjectionContext.RegisterItemObserver<T>(IItemObserver<T> observer)
+		{
+			var type = typeof(T);
+
+			if (!TypeToItemObservers.TryGetValue(type, out var observers))
+			{
+				observers = new HashSet<object>();
+				TypeToItemObservers[type] = observers;
+			}
+
+			observers.Add(observer);
+
+			if (!ItemObserversData.TryGetValue(observer, out var typeToItemObserverData))
+			{
+				typeToItemObserverData = new Dictionary<Type, ItemObserverData>();
+				ItemObserversData[observer] = typeToItemObserverData;
+			}
+
+			typeToItemObserverData[type] = new ItemObserverData<T>(observer);
+		}
+
+		void IInternalInjectionContext.UnregisterItemObserver<T>(IItemObserver<T> observer)
+		{
+			var type = typeof(T);
+
+			if (!TypeToItemObservers.TryGetValue(type, out var observers))
+			{
+				observers.Remove(observer);
+
+				if (!ItemObserversData.TryGetValue(observer, out var typeToItemObserverData))
+				{
+					typeToItemObserverData.Remove(type);
+
+					if (typeToItemObserverData.Count == 0)
+					{
+						ItemObserversData.Remove(observer);
+					}
+				}
 			}
 		}
 	}
