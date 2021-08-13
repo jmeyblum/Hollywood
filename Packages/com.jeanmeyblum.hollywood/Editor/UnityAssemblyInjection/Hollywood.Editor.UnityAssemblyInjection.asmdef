@@ -1,7 +1,10 @@
 {
     "name": "Hollywood.Editor.UnityAssemblyInjection",
+    "rootNamespace": "",
     "references": [
-        "GUID:6c23540c28bfe504ab6f20d148b44470"
+        "GUID:6c23540c28bfe504ab6f20d148b44470",
+        "GUID:53a7db8d4ba7c824a80f0e40ca06f2c9",
+        "GUID:c43b95b88c212a8499e9e59de5572223"
     ],
     "includePlatforms": [
         "Editor"

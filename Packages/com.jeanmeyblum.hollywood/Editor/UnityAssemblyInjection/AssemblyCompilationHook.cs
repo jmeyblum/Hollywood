@@ -83,7 +83,7 @@ namespace Hollywood.Editor.UnityAssemblyInjection
 
 			using (var assemblyDefinition = AssemblyDefinition.ReadAssembly(assemblyPath, new ReaderParameters(ReadingMode.Immediate) { ReadSymbols = true, ReadWrite = true, AssemblyResolver = assemblyResolver, SymbolReaderProvider = new PdbReaderProvider() }))
 			{
-				var injectionResult = AssemblyInjector.Inject(assemblyDefinition);
+				var injectionResult = UnityAssemblyInjector.Inject(assemblyDefinition);
 
 				if (injectionResult == InjectionResult.Modified)
 				{

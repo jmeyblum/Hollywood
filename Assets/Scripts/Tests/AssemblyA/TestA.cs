@@ -32,16 +32,18 @@ public class SomeOtherItem
 
 }
 
-public class ExampleItemObserver : IItemObserver<SomeItem>, IItemObserver<SomeOtherItem>
+public class ExampleItemObserver : IItemObserver<SomeItem>, IItemObserver<SomeObservedComponent>
 {
 	void IItemObserver<SomeItem>.OnItemCreated(SomeItem item)
 	{
         UnityEngine.Debug.Log($"{nameof(SomeItem)} created");
 	}
 
-	void IItemObserver<SomeOtherItem>.OnItemCreated(SomeOtherItem item)
+	void IItemObserver<SomeObservedComponent>.OnItemCreated(SomeObservedComponent item)
 	{
-        UnityEngine.Debug.Log($"{nameof(SomeOtherItem)} created");
+        UnityEngine.Debug.Log($"{nameof(SomeObservedComponent)} created");
+
+        item.Initialize(this);
     }
 
 	void IItemObserver<SomeItem>.OnItemDestroyed(SomeItem item)
@@ -49,7 +51,7 @@ public class ExampleItemObserver : IItemObserver<SomeItem>, IItemObserver<SomeOt
         UnityEngine.Debug.Log($"{nameof(SomeItem)} destroyed");
     }
 
-	void IItemObserver<SomeOtherItem>.OnItemDestroyed(SomeOtherItem item) 
+	void IItemObserver<SomeObservedComponent>.OnItemDestroyed(SomeObservedComponent item) 
 	{
         UnityEngine.Debug.Log($"{nameof(SomeOtherItem)} destroyed");
     }

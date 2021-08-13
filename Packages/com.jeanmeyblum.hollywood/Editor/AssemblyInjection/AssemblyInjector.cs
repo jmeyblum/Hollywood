@@ -6,12 +6,15 @@ using Hollywood.Runtime;
 using Mono.Cecil.Cil;
 using Hollywood.Runtime.Internal;
 using Mono.Collections.Generic;
+using System.Runtime.CompilerServices;
+
+[assembly: InternalsVisibleTo("Hollywood.Editor.UnityAssemblyInjection")]
 
 namespace Hollywood.Editor.AssemblyInjection
 {
 	// TODO: validate that __Hollywood_Injected is not used by user
 
-	public class AssemblyInjector
+	internal class AssemblyInjector
 	{
 		internal static readonly Type InjectorType = typeof(Injector);
 		internal static readonly Type OwnsAttributeType = typeof(OwnsAttribute);
@@ -25,23 +28,19 @@ namespace Hollywood.Editor.AssemblyInjection
 		private static readonly Type HollywoodInjectedType = typeof(__Hollywood_Injected);
 		private static readonly Type HollywoodItemObserverType = typeof(__Hollywood_ItemObserver);
 
-		private const System.Reflection.BindingFlags StaticBindingFlags = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
-		private const System.Reflection.BindingFlags InstanceBindingFlags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+		internal const System.Reflection.BindingFlags StaticBindingFlags = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+		internal const System.Reflection.BindingFlags InstanceBindingFlags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
 
 		private static readonly System.Reflection.MethodInfo InjectorAddInstanceMethod = typeof(Injector.Advanced).GetMethod(nameof(Injector.Advanced.AddInstance), StaticBindingFlags);
 		private static readonly System.Reflection.MethodInfo InjectorAddInstancesMethod = typeof(Injector.Advanced).GetMethod(nameof(Injector.Advanced.AddInstances), StaticBindingFlags);
 
 		private static readonly System.Reflection.MethodInfo FindDependencyMethod = typeof(Injector).GetMethod(nameof(Injector.FindDependency), StaticBindingFlags);
 
-		private static readonly System.Reflection.MethodInfo ResolveOwnedInstancesMethod = typeof(Injector.Internal).GetMethod(nameof(Injector.Internal.ResolveOwnedInstances), StaticBindingFlags);
-		private static readonly System.Reflection.MethodInfo DisposeOwnedInstancesMethod = typeof(Injector.Internal).GetMethod(nameof(Injector.Internal.DisposeOwnedInstances), StaticBindingFlags);
-
 		private static readonly System.Reflection.MethodInfo InjectorRegisterItemObserverMethod = typeof(Injector.Advanced).GetMethod(nameof(Injector.Advanced.RegisterItemObserver), StaticBindingFlags);
 		private static readonly System.Reflection.MethodInfo InjectorUnregisterItemObserverMethod = typeof(Injector.Advanced).GetMethod(nameof(Injector.Advanced.UnregisterItemObserver), StaticBindingFlags);
 
 		private readonly string ResolveProtectedMethodName;
 
-		private readonly AssemblyDefinition AssemblyDefinition;
 		private readonly MethodReference InjectorAddInstanceMethodReference;
 		private readonly MethodReference InjectorAddInstancesMethodReference;
 
@@ -57,17 +56,18 @@ namespace Hollywood.Editor.AssemblyInjection
 		private readonly MethodReference InjectorRegisterItemObserverMethodReference;
 		private readonly MethodReference InjectorUnregisterItemObserverMethodReference;
 
-		private readonly TypeReference VoidType;
-		private readonly TypeReference ObjectType;
-		private readonly TypeReference TypeType;
-		private readonly TypeReference TypeArrayType;
-		private readonly TypeReference TypeArrayArrayType;
+		internal readonly TypeReference VoidType;
+		internal readonly TypeReference ObjectType;
+		internal readonly TypeReference TypeType;
+		internal readonly TypeReference TypeArrayType;
+		internal readonly TypeReference TypeArrayArrayType;
 
 		private readonly MethodReference GetTypeFromHandleMethod;
 
-		private InjectionResult Result;
+		protected readonly AssemblyDefinition AssemblyDefinition;
+		protected InjectionResult Result;
 
-		private AssemblyInjector(AssemblyDefinition assemblyDefinition)
+		protected AssemblyInjector(AssemblyDefinition assemblyDefinition)
 		{
 			AssemblyDefinition = assemblyDefinition;
 
@@ -101,14 +101,14 @@ namespace Hollywood.Editor.AssemblyInjection
 			Inject();
 		}
 
-		private void Inject()
+		protected virtual void Inject()
 		{
 			var injectionData = new InjectionData(AssemblyDefinition.MainModule);
 
 			Inject(injectionData);
 		}
 
-		private void Inject(InjectionData injectionData)
+		protected void Inject(InjectionData injectionData)
 		{
 			Inject(injectionData.InjectableTypes);
 

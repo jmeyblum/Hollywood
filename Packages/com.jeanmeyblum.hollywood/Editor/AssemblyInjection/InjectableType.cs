@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Hollywood.Editor.AssemblyInjection
 {
-	internal class InjectableType
+	public class InjectableType
 	{
 		public TypeDefinition Type;
 
