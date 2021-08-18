@@ -57,7 +57,7 @@ namespace Hollywood.Editor.UnityAssemblyInjection
 
 		private void InjectMethodCallInMethod(InjectableMonoBehaviour injectableMonoBehaviour, string methodName, MethodReference methodReference)
 		{
-			if (!(injectableMonoBehaviour.Type.Methods.FirstOrDefault(m => m.Name == methodName && m.HasThis && m.ReturnType == VoidType) is MethodDefinition method))
+			if (!(injectableMonoBehaviour.Type.Methods.FirstOrDefault(m => m.Name == methodName && m.HasThis && m.ReturnType.FullName == VoidType.FullName) is MethodDefinition method))
 			{
 				method = new MethodDefinition(
 				methodName,

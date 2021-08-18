@@ -88,7 +88,7 @@ public class BootSystem : IUpdatable, IInitializable, System.IDisposable
                 _stateMachine.TransitionTo<LobbyState>();
             }
 
-            await Task.Yield();
+			await Task.Yield();
         }
     }
 }

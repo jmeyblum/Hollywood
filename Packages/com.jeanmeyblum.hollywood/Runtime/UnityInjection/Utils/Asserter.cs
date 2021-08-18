@@ -1,5 +1,6 @@
 ﻿namespace Hollywood.Runtime.UnityInjection
 {
+	[IncludeType]
 	public class Asserter : IAsserter
 	{
 		void IAsserter.Throw(object message)

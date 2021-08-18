@@ -74,7 +74,9 @@ namespace Hollywood.Runtime
 
 		private T FindInnerDependency<T>(object current, object childToIgnore = null)
 		{
-			if (typeof(T).IsAssignableFrom(current.GetType()))
+			Type type = typeof(T);
+
+			if (IsAssignableFrom(type, current.GetType()))
 			{
 				return (T)current;
 			}
@@ -86,7 +88,7 @@ namespace Hollywood.Runtime
 					continue;
 				}
 
-				if (typeof(T).IsAssignableFrom(children.GetType()))
+				if (IsAssignableFrom(type, children.GetType()))
 				{
 					return (T)children;
 				}
@@ -105,6 +107,11 @@ namespace Hollywood.Runtime
 			}
 
 			return default;
+		}
+
+		private bool IsAssignableFrom(Type generalType, Type specificType)
+		{
+			return TypeResolver.GetAssignableTypes(specificType).Contains(generalType);
 		}
 
 		T IInjectionContext.GetInstance<T>(object owner)
@@ -138,6 +145,8 @@ namespace Hollywood.Runtime
 			{
 				Injector.InjectionContext = this;
 
+				((IAdvancedInjectionContext)this).NotifyItemDestruction(instance);
+
 				if (instance is __Hollywood_ItemObserver itemObserver)
 				{
 					itemObserver.__Unregister();
@@ -156,6 +165,10 @@ namespace Hollywood.Runtime
 				}
 			
 				((IInternalInjectionContext)this).DisposeOwnedInstances(instance);
+			}
+			catch (Exception e)
+			{
+				Log.LogFatalError(e);
 			}
 			finally
 			{
@@ -193,9 +206,11 @@ namespace Hollywood.Runtime
 
 			owner ??= Instances.Root;
 
+			Type type = typeof(T);
+
 			foreach (var child in Instances.GetChildren(owner))
 			{
-				if (typeof(T).IsAssignableFrom(child.GetType()))
+				if (IsAssignableFrom(type, child.GetType()))
 				{
 					return (T)child;
 				}
@@ -204,7 +219,7 @@ namespace Hollywood.Runtime
 			var instanceType = TypeResolver.Get<T>();
 
 			Assert.IsNotNull(instanceType, $"{nameof(TypeResolver)} resolved to null for type {typeof(T).Name}.");
-			Assert.IsTrue(typeof(T).IsAssignableFrom(instanceType), $"{nameof(TypeResolver)} resolved to an incompatible type ({instanceType.Name}) for type {typeof(T).Name}.");
+			Assert.IsTrue(IsAssignableFrom(type, instanceType), $"{nameof(TypeResolver)} resolved to an incompatible type ({instanceType.Name}) for type {typeof(T).Name}.");
 
 			var instance = CreateNewInstance<T>(owner, instanceType);
 
@@ -215,7 +230,9 @@ namespace Hollywood.Runtime
 		{
 			owner ??= Instances.Root;
 
-			Assert.IsFalse(Instances.GetChildren(owner).Any(child => typeof(T).IsAssignableFrom(child.GetType())), $"{owner} already contains an instance for type {typeof(T).Name}.");
+			Type type = typeof(T);
+
+			Assert.IsFalse(Instances.GetChildren(owner).Any(child => IsAssignableFrom(type, child.GetType())), $"{owner} already contains an instance for type {typeof(T).Name}.");
 
 			SetupInstance<T>(owner, instance);
 
@@ -232,12 +249,14 @@ namespace Hollywood.Runtime
 
 			owner ??= Instances.Root;
 
-			var existingInstances = Instances.GetChildren(owner).Where(child => typeof(T).IsAssignableFrom(child.GetType())).Cast<T>();
+			Type type = typeof(T);
+
+			var existingInstances = Instances.GetChildren(owner).Where(child => IsAssignableFrom(type, child.GetType())).Cast<T>();
 			var instanceTypes = TypeResolver.GetAll<T>();
 
 			Assert.IsNotNull(instanceTypes, $"{nameof(TypeResolver)} resolved to null for type {typeof(T).Name}.");
 			Assert.IsTrue(instanceTypes.Count() > 0, $"{nameof(TypeResolver)} resolved to 0 types for type {typeof(T).Name}.");
-			Assert.IsTrue(instanceTypes.All(instanceType => typeof(T).IsAssignableFrom(instanceType)), $"{nameof(TypeResolver)} resolved to a some incompatible types for type {typeof(T).Name}.");
+			Assert.IsTrue(instanceTypes.All(instanceType => IsAssignableFrom(type, instanceType)), $"{nameof(TypeResolver)} resolved to a some incompatible types for type {typeof(T).Name}.");
 
 			var instanceTypesToCreate = instanceTypes.Except(existingInstances.Select(c => c.GetType()));
 
@@ -310,6 +329,10 @@ namespace Hollywood.Runtime
 						Log.LogError(e);
 					}
 				}
+			}
+			catch(Exception e)
+			{
+				Log.LogFatalError(e);
 			}
 			finally
 			{
@@ -426,12 +449,18 @@ namespace Hollywood.Runtime
 						CreateUpdatableTask(updatable);
 					}
 				}
+				catch (Exception e)
+				{
+					Log.LogFatalError(e);
+				}
 				finally
 				{
 					Injector.InjectionContext = previousInjectionContext;
 				}
 
 				instanceData.State = InstanceState.Initialized;
+
+				((IAdvancedInjectionContext)this).NotifyItemCreation(instance);
 			}
 			catch (TaskCanceledException) { }
 			catch (OperationCanceledException) { }
@@ -464,26 +493,26 @@ namespace Hollywood.Runtime
 
 				needs.Remove(instance);
 			}
-		}
 
-		private async void CreateUpdatableTask(IUpdatable instance)
-		{
-			try
+			async void CreateUpdatableTask(IUpdatable instance)
 			{
-				Assert.IsNotNull(instance, $"{nameof(instance)} is null.");
-				Assert.IsTrue(Instances.Contains(instance) && InstancesData.ContainsKey(instance), $"{instance} is unknown from this {nameof(IInjectionContext)}: {this}.");
+				try
+				{
+					Assert.IsNotNull(instance, $"{nameof(instance)} is null.");
+					Assert.IsTrue(Instances.Contains(instance) && InstancesData.ContainsKey(instance), $"{instance} is unknown from this {nameof(IInjectionContext)}: {this}.");
 
-				var instanceData = InstancesData[instance];
+					var instanceData = InstancesData[instance];
 
-				var token = instanceData.TaskTokenSource.Token;
+					var token = instanceData.TaskTokenSource.Token;
 
-				await instance.Update(token);
-			}
-			catch (TaskCanceledException) { }
-			catch (OperationCanceledException) { }
-			catch (Exception e)
-			{
-				Log.LogError(e);
+					await instance.Update(token);
+				}
+				catch (TaskCanceledException) { }
+				catch (OperationCanceledException) { }
+				catch (Exception e)
+				{
+					Log.LogError(e);
+				}
 			}
 		}
 

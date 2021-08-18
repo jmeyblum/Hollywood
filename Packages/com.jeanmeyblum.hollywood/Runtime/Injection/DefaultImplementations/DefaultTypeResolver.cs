@@ -79,15 +79,19 @@ namespace Hollywood.Runtime
 
 				while (baseType != null)
 				{
-					if (!ClassTypesMap.TryGetValue(baseType, out HashSet<Type> relatedChildType))
-					{
-						relatedChildType = new HashSet<Type>();
-						ClassTypesMap.Add(baseType, relatedChildType);
-					}
-
-					relatedChildType.UnionWith(childs);
-
 					childs.Add(baseType);
+
+					foreach (var child in childs)
+					{
+						if (!ClassTypesMap.TryGetValue(child, out HashSet<Type> relatedParentType))
+						{
+							relatedParentType = new HashSet<Type>();
+							ClassTypesMap.Add(child, relatedParentType);
+						}
+
+						relatedParentType.Add(baseType);
+					}
+					
 					baseType = baseType.BaseType;
 				}
 			}

@@ -1,5 +1,6 @@
 ﻿namespace Hollywood.Runtime.UnityInjection
 {
+	[IncludeType]
 	public class Logger : ILogger
 	{
 		void ILogger.LogError(object message)
