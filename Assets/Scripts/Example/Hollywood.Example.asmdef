@@ -1,11 +1,9 @@
 {
-    "name": "Assembly.A",
+    "name": "Hollywood.Example",
     "rootNamespace": "",
     "references": [
         "GUID:c43b95b88c212a8499e9e59de5572223",
-        "GUID:53a7db8d4ba7c824a80f0e40ca06f2c9",
-        "GUID:a9ba89c4c7da5f5429e2e2f99a07e5d6",
-        "GUID:ce727a4f106c1f44da29fbd2ea4e46b5"
+        "GUID:a9ba89c4c7da5f5429e2e2f99a07e5d6"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
