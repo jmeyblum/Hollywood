@@ -1,5 +1,6 @@
 {
     "name": "Hollywood.Editor.AssemblyInjection",
+    "rootNamespace": "",
     "references": [
         "GUID:c43b95b88c212a8499e9e59de5572223"
     ],
@@ -8,8 +9,10 @@
     ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
-    "overrideReferences": false,
-    "precompiledReferences": [],
+    "overrideReferences": true,
+    "precompiledReferences": [
+        "Mono.Cecil.dll"
+    ],
     "autoReferenced": true,
     "defineConstraints": [],
     "versionDefines": [],
