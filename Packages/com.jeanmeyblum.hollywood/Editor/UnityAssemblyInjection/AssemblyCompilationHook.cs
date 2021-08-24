@@ -81,13 +81,16 @@ namespace Hollywood.Editor.UnityAssemblyInjection
 				assemblyResolver.AddSearchDirectory(path);
 			}
 
-			using (var assemblyDefinition = AssemblyDefinition.ReadAssembly(assemblyPath, new ReaderParameters(ReadingMode.Immediate) { ReadSymbols = true, ReadWrite = true, AssemblyResolver = assemblyResolver, SymbolReaderProvider = new PdbReaderProvider() }))
+			using (var assemblyStream = new FileStream(assemblyPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
 			{
-				var injectionResult = UnityAssemblyInjector.Inject(assemblyDefinition);
-
-				if (injectionResult == InjectionResult.Modified)
+				using (var assemblyDefinition = AssemblyDefinition.ReadAssembly(assemblyStream, new ReaderParameters(ReadingMode.Immediate) { ReadSymbols = true, ReadWrite = true, AssemblyResolver = assemblyResolver, SymbolReaderProvider = new PdbReaderProvider()}))
 				{
-					assemblyDefinition.Write(assemblyPath, new WriterParameters { WriteSymbols = true, SymbolWriterProvider = new PdbWriterProvider() });
+					var injectionResult = UnityAssemblyInjector.Inject(assemblyDefinition);
+
+					if (injectionResult == InjectionResult.Modified)
+					{
+						assemblyDefinition.Write(assemblyStream, new WriterParameters { WriteSymbols = true, SymbolWriterProvider = new PdbWriterProvider()});
+					}
 				}
 			}
 		}
