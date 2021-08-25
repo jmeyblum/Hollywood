@@ -5,7 +5,7 @@
       "depth": 0,
       "source": "embedded",
       "dependencies": {
-        "nuget.mono-cecil": ""
+        "nuget.mono-cecil": "0.1.6-preview"
       }
     },
     "com.unity.burst": {
