@@ -1,5 +1,4 @@
 using Hollywood.Runtime.Observer;
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,7 +11,7 @@ namespace Hollywood.Runtime.StateMachine
 	/// </summary>
 	/// <typeparam name="TInitialState"></typeparam>
 	[Owns(typeof(ObservableHandler<StateMachineEvent>))]
-	public class StateMachine<TInitialState> : IInitializable, Observer.IObservable<StateMachineEvent> where TInitialState : class, IState
+	public class StateMachine<TInitialState> : IInitializable, IObservable<StateMachineEvent> where TInitialState : class, IState
 	{
 		public IState State { get; private set; } 
 
@@ -48,7 +47,7 @@ namespace Hollywood.Runtime.StateMachine
 			_observableHandler.Send(new StateMachineEventPostEnterState(previousState, State));
 		}
 
-		public IUnsubscriber Subscribe(Observer.IObserver<StateMachineEvent> observer)
+		public IUnsubscriber Subscribe(IObserver<StateMachineEvent> observer)
 		{
 			return _observableHandler.Subscribe(observer);
 		}

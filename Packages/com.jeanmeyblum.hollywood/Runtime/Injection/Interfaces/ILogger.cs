@@ -5,6 +5,7 @@
 	/// </summary>
 	public interface ILogger
 	{
+		LogLevel LogLevel { get; }
 		void LogTrace(object message);
 		void LogMessage(object message);
 		void LogWarning(object message);

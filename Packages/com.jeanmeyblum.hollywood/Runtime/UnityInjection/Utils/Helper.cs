@@ -35,7 +35,22 @@ namespace Hollywood.Runtime.UnityInjection
 		/// </summary>
 		public static void SetupUnityLogger()
 		{
-			Log.Logger = new Logger();
+			var logger = new Logger();
+
+#if HOLLYWOOD_UNITY_LOG_TRACE
+			logger.LogLevel = LogLevel.Trace;
+#elif HOLLYWOOD_UNITY_LOG_MESSAGE
+			logger.LogLevel = LogLevel.Message;
+#elif HOLLYWOOD_UNITY_LOG_WARNING
+			logger.LogLevel = LogLevel.Warning;			
+#elif HOLLYWOOD_UNITY_LOG_ERROR
+			logger.LogLevel = LogLevel.Error;
+#elif HOLLYWOOD_UNITY_LOG_FATAL_ERROR
+			logger.LogLevel = LogLevel.FatalError;
+#elif HOLLYWOOD_UNITY_LOG_TRACE_NONE
+			logger.LogLevel = LogLevel.None;
+#endif
+			Log.Logger = logger;
 		}
 
 		/// <summary>

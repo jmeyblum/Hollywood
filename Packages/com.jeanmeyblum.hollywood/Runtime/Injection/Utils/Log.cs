@@ -10,31 +10,46 @@ namespace Hollywood.Runtime
 		[Conditional(LoggerDefineSymbol)]
 		internal static void LogTrace(object message)
 		{
-			Logger?.LogTrace(message);
+			if (Logger?.LogLevel.HasFlag(LogLevel.TraceOnly) == true)
+			{
+				Logger?.LogTrace(message);
+			}
 		}
 
 		[Conditional(LoggerDefineSymbol)]
 		internal static void LogMessage(object message)
 		{
-			Logger?.LogMessage(message);
+			if (Logger?.LogLevel.HasFlag(LogLevel.MessageOnly) == true)
+			{
+				Logger?.LogMessage(message);
+			}
 		}
 
 		[Conditional(LoggerDefineSymbol)]
 		internal static void LogWarning(object message)
 		{
-			Logger?.LogWarning(message);
+			if (Logger?.LogLevel.HasFlag(LogLevel.WarningOnly) == true)
+			{
+				Logger?.LogWarning(message);
+			}
 		}
 
 		[Conditional(LoggerDefineSymbol)]
 		internal static void LogError(object message)
 		{
-			Logger?.LogError(message);
+			if (Logger?.LogLevel.HasFlag(LogLevel.ErrorOnly) == true)
+			{
+				Logger?.LogError(message);
+			}
 		}
 
 		[Conditional(LoggerDefineSymbol)]
 		internal static void LogFatalError(object message)
 		{
-			Logger?.LogFatalError(message);
+			if (Logger?.LogLevel.HasFlag(LogLevel.FatalErrorOnly) == true)
+			{
+				Logger?.LogFatalError(message);
+			}
 		}
 	}
 }

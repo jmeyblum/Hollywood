@@ -57,7 +57,7 @@ Before a system can access any other systems as dependencies, those systems need
 
 When a system needs to access another system, it can add a `[Needs]` attribute on top of a field of a system's type it needs to access to. This field will then automatically be assigned to the proper instance of the needed system, if the system exists at the same or higher hierarchy where the declaring system is owned.
 
-You can group together owned systems over a class implementing the `IModule` interface. When you do so all systems owned by the module are considered to be at the same hierarchy level as where the module itseld is owned, and recursively if your module owns other modules. This lets you organize your systems together per concept but still make them accessible for system outside of your module but at a deeper hierarchy level. Note that a module can't have any dependency itself.
+You can group together owned systems over a class implementing the `IModule` interface. When you do so all systems owned by the module are considered to be at the same hierarchy level as where the module itself is owned, and recursively if your module owns other modules. This lets you organize your systems together per concept but still make them accessible for system outside of your module but at a deeper hierarchy level. Note that a module can't have any dependency itself.
 
 ### State Machine
 
@@ -75,7 +75,7 @@ To ease the implementation part of the `IObservable<T>` interface, you can make 
 
 ```c#
 [Owns(typeof(ObservableHandler<SomeEvent>))]
-public class SomeSystem
+public class SomeSystem : IObservable<SomeEvent>
 {
     [Needs]
     private ObservableHandler<SomeEvent> _observableHandler;
@@ -106,8 +106,18 @@ When an instance of a specific type wants to notify its creation and destruction
 
 You can use the `[ObservedMonoBehaviour]` attribute on top of a `MonoBehaviour` derived type to automatically notify item creation when the component is awoken and when it is destroyed, without having to manually call the injector.
 
+This is useful to have a way of communication between objects coming from prefabs and scenes and pure C# systems. It also allows to give them access to those systems. That being said you should be careful if you decide to let your MonoBehaviour keep a reference to a system to make sure the lifetime of the MonoBehaviour is shorter than the systems it is using. The ideal solution beeing to make your systems control, keep track and use your MonoBehaviour and not the opposite.
+
 ### IInitializable and IUpdatable
 
+You can use the `IInitializable` interface on a system which will make it implements the `Task Initialize(CancellationToken token)` method. This method will be called automatically by the injection framework and its task will be awaited to make sure that any other systems needing the system will be initialized only when the task completes. You can make a system to not wait for a particular initialization of one of its needed field dependency by setting the `ignoreInitialization` constructor argument of its `[Needs(ignoreInitialization: true)]` attribute to `true`.
+
+You can use the `IUpdatable` interface on a system which will make it implements the `Task Update(CancellationToken token)` method. This method will be called automatically by the injection framework after the system is fully initialized, which means after the `Initialize` task completed if the system is `IInitializable` or else after all its needed systems are initialized. The task return by the `Update` method is not awaited within the framework and can be used to start a long running task for the lifetime of the system.
+
+Methods from both interfaces receive a `CancellationToken` that you should ideally check after each async operation to know if the system has been disposed.
+
 ### Other Features
+
+// add external instance, IgnoreTypeAttribute, IncludeTypeAttribute, InheritsFromInjectableAttribute, OwnsAllAttribute, IResolvable
 
 ## How it works

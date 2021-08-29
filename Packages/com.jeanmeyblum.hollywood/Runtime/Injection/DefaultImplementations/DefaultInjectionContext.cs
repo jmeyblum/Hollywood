@@ -32,6 +32,8 @@ namespace Hollywood.Runtime
 
 		T IInjectionContext.FindDependency<T>(object instance, bool ignoreInitialization)
 		{
+			Log.LogTrace($"Finding dependency of type {typeof(T).Name} for {instance} ({instance?.GetType().Name}).");
+
 			Assert.IsNotNull(instance, $"{nameof(instance)} is null.");
 			Assert.IsTrue(Instances.Contains(instance), $"{instance} is unknown from this {nameof(IInjectionContext)}: {this}.");
 			Assert.IsFalse(instance is IModule, $"{instance} implements {nameof(IModule)} and thus can't have dependencies.");
@@ -58,6 +60,8 @@ namespace Hollywood.Runtime
 			} 
 			else
 			{
+				Log.LogTrace($"Dependency {dependency} found for needed type {typeof(T).Name} for {instance} ({instance?.GetType().Name}).");
+
 				Assert.IsTrue(InstancesData.ContainsKey(instance), $"{instance} is unknown from this {nameof(IInjectionContext)}: {this}.");
 
 				var instanceData = InstancesData[instance];
@@ -116,6 +120,8 @@ namespace Hollywood.Runtime
 
 		T IInjectionContext.GetInstance<T>(object owner)
 		{
+			Log.LogTrace($"Getting instance of type {typeof(T).Name} for owner {owner} ({owner?.GetType().Name}).");
+
 			var instance = ((IAdvancedInjectionContext)this).AddInstance<T>(owner);
 
 			((IAdvancedInjectionContext)this).ResolveInstance(instance);
@@ -125,6 +131,8 @@ namespace Hollywood.Runtime
 
 		IEnumerable<T> IInjectionContext.GetInstances<T>(object owner)
 		{
+			Log.LogTrace($"Getting instances of type {typeof(T).Name} for owner {owner} ({owner?.GetType().Name}).");
+
 			var instances = ((IAdvancedInjectionContext)this).AddInstances<T>(owner);
 
 			((IAdvancedInjectionContext)this).ResolveInstances(instances);
@@ -134,6 +142,8 @@ namespace Hollywood.Runtime
 
 		void IInjectionContext.DisposeInstance(object instance)
 		{
+			Log.LogTrace($"Disposing instance {instance} ({instance?.GetType().Name}).");
+
 			Assert.IsNotNull(instance, $"{nameof(instance)} is null.");
 			Assert.IsTrue(Instances.Contains(instance) && InstancesData.ContainsKey(instance), $"{instance} is unknown from this {nameof(IInjectionContext)}: {this}.");
 
@@ -149,6 +159,8 @@ namespace Hollywood.Runtime
 
 				if (instance is __Hollywood_ItemObserver itemObserver)
 				{
+					Log.LogTrace($"Unregistering observed item instance {instance} ({instance?.GetType().Name}).");
+
 					itemObserver.__Unregister();
 				}
 
@@ -156,6 +168,8 @@ namespace Hollywood.Runtime
 				{
 					try
 					{
+						Log.LogTrace($"Disposing instance {instance} ({instance?.GetType().Name}).");
+
 						disposable.Dispose();
 					}
 					catch(Exception e)
@@ -163,7 +177,7 @@ namespace Hollywood.Runtime
 						Log.LogError(e);
 					}
 				}
-			
+
 				((IInternalInjectionContext)this).DisposeOwnedInstances(instance);
 			}
 			catch (Exception e)
@@ -181,6 +195,8 @@ namespace Hollywood.Runtime
 
 		void IInjectionContext.Reset()
 		{
+			Log.LogTrace($"Resetting {nameof(IInjectionContext)}.");
+
 			((IInternalInjectionContext)this).DisposeOwnedInstances(Instances.Root);
 
 			TypeResolver.Reset();
@@ -193,6 +209,8 @@ namespace Hollywood.Runtime
 
 		void IInjectionContext.Dispose()
 		{
+			Log.LogTrace($"Disposing {nameof(IInjectionContext)}.");
+
 			((IInjectionContext)this).Reset();
 
 			TypeResolver = null;
@@ -201,6 +219,8 @@ namespace Hollywood.Runtime
 
 		T IAdvancedInjectionContext.AddInstance<T>(object owner)
 		{
+			Log.LogTrace($"Adding instance of type {typeof(T).Name} for owner {owner} ({owner?.GetType().Name}).");
+
 			Assert.IsNotNull(TypeResolver, $"{nameof(TypeResolver)} is null.");
 			Assert.IsNotNull(InstanceCreator, $"{nameof(InstanceCreator)} is null.");
 
@@ -212,6 +232,8 @@ namespace Hollywood.Runtime
 			{
 				if (IsAssignableFrom(type, child.GetType()))
 				{
+					Log.LogWarning($"An instance {child} of type {typeof(T).Name} already exists for owner {owner} ({owner?.GetType().Name}).");
+
 					return (T)child;
 				}
 			}			
@@ -228,6 +250,8 @@ namespace Hollywood.Runtime
 
 		void IAdvancedInjectionContext.AddExternalInstance<T>(T instance, object owner, bool autoResolve)
 		{
+			Log.LogTrace($"Adding external instance {instance} of type {typeof(T).Name} for owner {owner} ({owner?.GetType().Name}) ({nameof(autoResolve)}: {autoResolve}).");
+
 			owner ??= Instances.Root;
 
 			Type type = typeof(T);
@@ -244,6 +268,8 @@ namespace Hollywood.Runtime
 
 		IEnumerable<T> IAdvancedInjectionContext.AddInstances<T>(object owner)
 		{
+			Log.LogTrace($"Adding instances of type {typeof(T).Name} for owner {owner} ({owner?.GetType().Name}).");
+
 			Assert.IsNotNull(TypeResolver, $"{nameof(TypeResolver)} is null.");
 			Assert.IsNotNull(InstanceCreator, $"{nameof(InstanceCreator)} is null.");
 
@@ -274,6 +300,8 @@ namespace Hollywood.Runtime
 
 		private T CreateNewInstance<T>(object owner, Type instanceType) where T : class
 		{
+			Log.LogTrace($"Creating new instance of type {instanceType?.Name} for type {typeof(T).Name} for owner {owner} ({owner?.GetType().Name}).");
+
 			var instance = (T)InstanceCreator.Create(instanceType);
 
 			SetupInstance(owner, instance);
@@ -283,6 +311,8 @@ namespace Hollywood.Runtime
 
 		private void SetupInstance<T>(object owner, T instance) where T : class
 		{
+			Log.LogTrace($"Creating instance internal data for {instance} ({instance?.GetType().Name}) owned by {owner} ({owner?.GetType().Name}).");
+
 			Instances.Add(instance, owner);
 			var instanceData = new InstanceData();
 			InstancesData.Add(instance, instanceData);
@@ -294,6 +324,8 @@ namespace Hollywood.Runtime
 
 		void IAdvancedInjectionContext.ResolveInstance(object instance)
 		{
+			Log.LogTrace($"Resolving instance {instance} ({instance?.GetType().Name}).");
+
 			Assert.IsNotNull(instance, $"{nameof(instance)} is null.");
 			Assert.IsTrue(Instances.Contains(instance) && InstancesData.ContainsKey(instance), $"{instance} is unknown from this {nameof(IInjectionContext)}: {this}.");
 
@@ -303,6 +335,8 @@ namespace Hollywood.Runtime
 			{
 				return;
 			}
+
+			Log.LogTrace($"Instance {instance} ({instance?.GetType().Name}) changing state from {instanceData?.State} to {InstanceState.Resolving}.");
 
 			instanceData.State = InstanceState.Resolving;
 
@@ -338,6 +372,8 @@ namespace Hollywood.Runtime
 			{
 				Injector.InjectionContext = previousInjectionContext;
 			}
+
+			Log.LogTrace($"Instance {instance} ({instance?.GetType().Name}) changing state from {instanceData?.State} to {InstanceState.Initializing}.");
 
 			instanceData.State = InstanceState.Initializing;
 		}
@@ -386,6 +422,8 @@ namespace Hollywood.Runtime
 					{
 						var dependency = dependencyKVP.Key;
 
+						Log.LogTrace($"Instance {instance} ({instance?.GetType().Name}) is waiting for resolution of dependency {dependency} ({dependency?.GetType().Name}).");
+
 						Assert.IsTrue(InstancesData.ContainsKey(dependency), $"{dependency} is unknown from this {nameof(IInjectionContext)}: {this}.");
 
 						var dependencyInstanceData = InstancesData[dependency];
@@ -395,6 +433,8 @@ namespace Hollywood.Runtime
 
 					await Task.WhenAll(resolvingTasks);
 					token.ThrowIfCancellationRequested();
+
+					Log.LogTrace($"Verifying dependency cycle for instance {instance} ({instance?.GetType().Name}).");
 
 					VerifyCycle(instance, new List<object>());
 
@@ -407,6 +447,8 @@ namespace Hollywood.Runtime
 
 						if (!ignoreInitialization)
 						{
+							Log.LogTrace($"Instance {instance} ({instance?.GetType().Name}) is waiting for initialization of dependency {dependency} ({dependency?.GetType().Name}).");
+
 							Assert.IsTrue(InstancesData.ContainsKey(dependency), $"{dependency} is unknown from this {nameof(IInjectionContext)}: {this}.");
 
 							var dependencyInstanceData = InstancesData[dependency];
@@ -422,6 +464,8 @@ namespace Hollywood.Runtime
 
 				if (instance is IInitializable initializable)
 				{
+					Log.LogTrace($"Initializing instance {instance} ({instance?.GetType().Name}).");
+
 					try
 					{
 						await initializable.Initialize(token);
@@ -432,6 +476,8 @@ namespace Hollywood.Runtime
 					{
 						Log.LogError(e);
 					}
+
+					Log.LogTrace($"Done initializing instance {instance} ({instance?.GetType().Name}).");
 				}
 
 				IInjectionContext previousInjectionContext = Injector.InjectionContext;
@@ -441,6 +487,8 @@ namespace Hollywood.Runtime
 
 					if (instance is __Hollywood_ItemObserver itemObserver)
 					{
+						Log.LogTrace($"Registering observed item instance {instance} ({instance?.GetType().Name}).");
+
 						itemObserver.__Register();
 					}
 
@@ -458,6 +506,8 @@ namespace Hollywood.Runtime
 					Injector.InjectionContext = previousInjectionContext;
 				}
 
+				Log.LogTrace($"Instance {instance} ({instance?.GetType().Name}) changing state from {instanceData?.State} to {InstanceState.Initialized}.");
+
 				instanceData.State = InstanceState.Initialized;
 
 				((IAdvancedInjectionContext)this).NotifyItemCreation(instance);
@@ -472,7 +522,6 @@ namespace Hollywood.Runtime
 			void VerifyCycle(object instance, List<object> needs)
 			{
 				Assert.IsFalse(needs.Contains(instance), $"There is an initialization cycle introduced by a cyclic chain of needed dependencies: {string.Join(" -> ", needs)} -> {instance}");
-
 				Assert.IsTrue(InstancesData.ContainsKey(instance), $"{instance} is unknown from this {nameof(IInjectionContext)}: {this}.");
 
 				var instanceData = InstancesData[instance];
@@ -498,6 +547,8 @@ namespace Hollywood.Runtime
 			{
 				try
 				{
+					Log.LogTrace($"Starting update for instance {instance} ({instance?.GetType().Name}).");
+
 					Assert.IsNotNull(instance, $"{nameof(instance)} is null.");
 					Assert.IsTrue(Instances.Contains(instance) && InstancesData.ContainsKey(instance), $"{instance} is unknown from this {nameof(IInjectionContext)}: {this}.");
 
@@ -513,11 +564,17 @@ namespace Hollywood.Runtime
 				{
 					Log.LogError(e);
 				}
+				finally
+				{
+					Log.LogTrace($"Update task done for instance {instance} ({instance?.GetType().Name}).");
+				}
 			}
 		}
 
 		void IAdvancedInjectionContext.ResolveInstances(IEnumerable instances)
 		{
+			Log.LogTrace($"Resolving instances {instances}.");
+
 			Assert.IsNotNull(instances, $"{nameof(instances)} is null.");
 
 			foreach (var instance in instances)
@@ -528,12 +585,16 @@ namespace Hollywood.Runtime
 
 		void IAdvancedInjectionContext.NotifyItemCreation(object instance)
 		{
+			Log.LogTrace($"Notifying creation of instance {instance} ({instance?.GetType().Name}).");
+
 			foreach (var type in TypeResolver.GetAssignableTypes(instance.GetType()))
 			{
 				if (TypeToItemObservers.TryGetValue(type, out var observers))
 				{
 					foreach (var observer in observers)
 					{
+						Log.LogTrace($"Notifying creation of instance {instance} ({instance?.GetType().Name}) to observer {observer} ({observer?.GetType().Name}).");
+
 						try
 						{
 							ItemObserversData[observer][type].OnItemCreated(instance);
@@ -549,6 +610,8 @@ namespace Hollywood.Runtime
 
 		void IAdvancedInjectionContext.NotifyItemDestruction(object instance)
 		{
+			Log.LogTrace($"Notifying destruction of instance {instance} ({instance?.GetType().Name}).");
+
 			foreach (var type in TypeResolver.GetAssignableTypes(instance.GetType()))
 			{
 				if (TypeToItemObservers.TryGetValue(type, out var observers))
@@ -557,6 +620,8 @@ namespace Hollywood.Runtime
 					{
 						try
 						{
+							Log.LogTrace($"Notifying destruction of instance {instance} ({instance?.GetType().Name}) to observer {observer} ({observer?.GetType().Name}).");
+
 							ItemObserversData[observer][type].OnItemDestroyed(instance);
 						}
 						catch (Exception e)
@@ -570,6 +635,8 @@ namespace Hollywood.Runtime
 
 		void IInternalInjectionContext.ResolveOwnedInstances(object owner)
 		{
+			Log.LogTrace($"Resolving owner {owner} ({owner?.GetType().Name}) owned instances.");
+
 			Assert.IsTrue(Instances.Contains(owner), $"{owner} is unknown from this {nameof(IInjectionContext)}: {this}.");
 
 			foreach (var instance in Instances.GetChildren(owner))
@@ -580,6 +647,8 @@ namespace Hollywood.Runtime
 
 		void IInternalInjectionContext.DisposeOwnedInstances(object owner)
 		{
+			Log.LogTrace($"Disposing owner {owner} ({owner?.GetType().Name}) owned instances.");
+
 			Assert.IsTrue(Instances.Contains(owner), $"{owner} is unknown from this {nameof(IInjectionContext)}: {this}.");
 
 			while (Instances.GetChildren(owner).Any())
@@ -592,6 +661,8 @@ namespace Hollywood.Runtime
 
 		void IInternalInjectionContext.RegisterItemObserver<T>(IItemObserver<T> observer)
 		{
+			Log.LogTrace($"Registering item observer {observer} ({observer?.GetType().Name}) for type {typeof(T).Name}.");
+
 			var type = typeof(T);
 
 			if (!TypeToItemObservers.TryGetValue(type, out var observers))
@@ -613,6 +684,8 @@ namespace Hollywood.Runtime
 
 		void IInternalInjectionContext.UnregisterItemObserver<T>(IItemObserver<T> observer)
 		{
+			Log.LogTrace($"Unregistering item observer {observer} ({observer?.GetType().Name}) for type {typeof(T).Name}.");
+
 			var type = typeof(T);
 
 			if (!TypeToItemObservers.TryGetValue(type, out var observers))
