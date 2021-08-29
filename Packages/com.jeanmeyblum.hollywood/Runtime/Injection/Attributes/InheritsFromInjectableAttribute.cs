@@ -7,7 +7,7 @@ namespace Hollywood.Runtime
 	/// Note: Only use on class that inherits from a class using dependency injection.
 	/// </summary>
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
-	public class InheritsFromInjectableAttribute : Attribute
+	public class InheritsFromInjectableAttribute : IncludeTypeAttribute
 	{
 		private readonly Type _baseType;
 

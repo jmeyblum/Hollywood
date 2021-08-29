@@ -166,7 +166,7 @@ namespace Hollywood.Editor.AssemblyInjection
 
 			bool hasNeeds = injectableType.NeededTypes.Count > 0;
 
-			if (hasNeeds || isOwner)
+			if (hasNeeds || isOwner || injectableType.InjectableBaseType != null)
 			{
 				InjectHollywoodInjected(injectableType, isOwner);
 			}

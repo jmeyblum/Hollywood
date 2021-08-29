@@ -25,6 +25,12 @@ namespace Hollywood.Editor.AssemblyInjection
 
 			foreach (var typeDefinition in moduleDefinition.Types)
 			{
+				bool hasIgnoreTypeAttribute = typeDefinition.CustomAttributes.Where(attribute => attribute.AttributeType.FullName == AssemblyInjector.IgnoreTypeAttributeType.FullName).Any();
+				if (hasIgnoreTypeAttribute)
+				{
+					continue;
+				}
+
 				ProcessType(injectableTypes, injectedTypes, typeDefinition);
 			}
 
@@ -33,18 +39,6 @@ namespace Hollywood.Editor.AssemblyInjection
 				if (typeDefinition.IsAbstract || typeDefinition.IsValueType || typeDefinition.IsGenericParameter || typeDefinition.ContainsGenericParameter || typeDefinition.IsPrimitive || typeDefinition.IsArray)
 				{
 					continue;
-				}
-
-				bool hasIgnoreTypeAttribute = typeDefinition.CustomAttributes.Where(attribute => attribute.AttributeType.FullName == AssemblyInjector.IgnoreTypeAttributeType.FullName).Any();
-				if (hasIgnoreTypeAttribute)
-				{
-					continue;
-				}
-
-				bool hasIncludeTypeAttribute = typeDefinition.CustomAttributes.Where(attribute => attribute.AttributeType.FullName == AssemblyInjector.IncludeTypeAttributeType.FullName).Any();
-				if (hasIncludeTypeAttribute)
-				{
-					injectedTypes.Add(typeDefinition);					
 				}
 
 				foreach (var typeInterface in typeDefinition.Interfaces)
@@ -122,6 +116,19 @@ namespace Hollywood.Editor.AssemblyInjection
 					injectableType.NeededTypes.Add(neededField, (neededType, ignoreInitialization));
 					injectedTypes.Add(neededType);
 				}
+			}
+
+			bool hasIncludeTypeAttribute = typeDefinition.CustomAttributes.Where(attribute => attribute.AttributeType.FullName == AssemblyInjector.IncludeTypeAttributeType.FullName).Any();
+			if (hasIncludeTypeAttribute)
+			{
+				injectedTypes.Add(typeDefinition);
+			}
+
+			bool hasInheritsFromInjectableAttribute = typeDefinition.CustomAttributes.Where(attribute => attribute.AttributeType.FullName == AssemblyInjector.InheritsFromInjectableAttributeType.FullName).Any();
+			if (hasInheritsFromInjectableAttribute)
+			{
+				injectableType ??= new InjectableType(typeDefinition);
+				injectedTypes.Add(typeDefinition);
 			}
 
 			var observedTypes = typeDefinition.Interfaces
