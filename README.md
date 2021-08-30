@@ -16,6 +16,10 @@ Modify the `manifest.json` file of your Unity project under the Packages folder 
 
 ## Setup
 
+Though this framework was primarly made for Unity, the framework was divided into two kind of assemblies, one requiring Unity references and the other working without dependencies to the Unity engine. The goal is to make it agnostic enough so it could be forked and used in a non-Unity project without too much work.
+
+This documentation though will assume a setup for a Unity project.
+
 ### Automatic Setup
 
 Simply add the following scripting define symbol to your project's player setting:
@@ -40,6 +44,19 @@ To enable asserts and logs for the framework internal operations you need to add
 - HOLLYWOOD_LOG
 
 If you used the [Automatic Setup](#automatic-setup) the framework will already use default implementations for its assertions and logs. Otherwise, you will need to assign your own instances to `Hollywood.Runtime.Log.Logger` and `Hollywood.Runtime.Assert.Asserter` before creating and setting up your injection context.
+
+#### Log Level
+
+You can switch to different log levels from the `ILogger` instance. If you have used the [Automatic Setup](#automatic-setup) or used the `Hollywood.Runtime.UnityInjection.Helper.InitializeHollywoodWithDefaultForUnity()` method to initialized the framework, you can also specified one of the following scripting define symbol to set the initial log level:
+
+- HOLLYWOOD_UNITY_LOG_TRACE
+- HOLLYWOOD_UNITY_LOG_MESSAGE
+- HOLLYWOOD_UNITY_LOG_WARNING
+- HOLLYWOOD_UNITY_LOG_ERROR
+- HOLLYWOOD_UNITY_LOG_FATAL_ERROR
+- HOLLYWOOD_UNITY_LOG_NONE
+
+Each of them will activate the corresponding log level and above so there is no use to set multiple of them at the same time.
 
 ## Concept
 
@@ -118,6 +135,42 @@ Methods from both interfaces receive a `CancellationToken` that you should ideal
 
 ### Other Features
 
-// add external instance, IgnoreTypeAttribute, IncludeTypeAttribute, InheritsFromInjectableAttribute, OwnsAllAttribute, IResolvable
+This section focuses on some more advanced features of the framework. What was describe previously on this document should hopefully cover most of your normal use cases.
+
+#### Adding External Instance
+
+There might be cases where you want to be able to use a system through the framework that were not created by it. This can happen when you don't have control over the system's creation or when the system is created before the framework was ready to be used.
+
+When this is the case, you can use `Hollywood.Runtime.Injector.AddExternalInstance<T>(...)` to add your instance to the framework. Instances added can then be retrieved then from other system as needs dependencies.
+
+#### IgnoreTypeAttribute, IncludeTypeAttribute and InheritsFromInjectableAttribute
+
+Due to technical architecture choices made to improve the time taken to inject compiled assemblies there might be cases where you need to give some hints to the framework about your systems which otherwise might leads to systems not being injected properly.
+
+The `[IgnoreType]` attribute can be used on top of class to make sure the framework doesn't choose this type when resolving a type.
+
+The `[IncludeType]` attribute can be used when you have a type implementing an interface used within your systems but the class type and the interface lives in different assemblies and the class type doesn't have any owns or needs. This comes from the fact that when injecting an assembly, the framework only consider types and interfaces from within the assembly for which it can deduce if they will be used through injection. It doesn't have access to any details concerning types in other assemblies.
+
+The `[InheritsFromInjectable]` attribute can be used when you have a type inheriting from a type which has its own owns or needs when the base type is not a direct parent of the derived type or when the base type is located in a different assembly. To say it differently, you don't need this attribute when your type directly derives from a type located in the same assembly and which have owns and needs, otherwise you need this attribute. If the base type having owns and needs is not the direct parent of the type you need to specify in the attribute what is the base type having own and needs. Like for `[IncludeType]` attribute, this is due to the fact that when injecting code in the compiled assembly, the framework doesn't know much about types in other asemblies.
+
+#### OwnsAllAttribute
+
+This attribute is very similar to the `[Owns(typeof(T))]` attribute except that it will owns all concrete types that match the `T` type.
+
+#### IResolvable and IDisposable
+
+One of the requirement for this framework was that the code injected by the framework post assembly compilation would also be writtable manually. This can be achieved through the `IResolvable` and `IDisposable` interfaces, both called by the framework.
+
+When injecting a system manually, you usually want to add owned instances from the system's constructor and resolves dependencies (which would otherwise come from `[Needs]` field attributes) from the `IResolvable.Resolve()` method.
+
+The `IDisposable.Dipose()` method can be used both when injecting a system automatically or manually and will be called when a system gets disposed.
+
+## Why you should used interfaces for Owns and Needs
+
+You can use both class or interface types for `[Needs]` and `[Owns(typeof(T))]` attributes. The advantages of using interface type though is that you can more easily change the concrete implementation type of your system. This can be useful for testing, platform specific systems or configuration specific systems.
 
 ## How it works
+
+One of the main objective when building this framework was to reduce the amount of reflection calls at runtime to ensure having a fast and allocation friendly system. To achieve such results, the framework analyzes compiled assemblies and looks for uses of interfaces and attributes from the framework in order to modify and inject code inside existing classes. The framework also injects types maps to be able to know relations between classes and interfaces without having to call reflection methods at runtime.
+
+Each owned system from `[Owns(typeof(T))]` attributes on a system type will be converted to an `Injector.AddInstance<T>()` call within the system constructor method. Each `[Needs]` attribute on fields are converted to a `Injector.FindDependency<T>(...)` call from within a resolution method added during code injection.

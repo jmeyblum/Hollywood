@@ -47,7 +47,7 @@ namespace Hollywood.Runtime.UnityInjection
 			logger.LogLevel = LogLevel.Error;
 #elif HOLLYWOOD_UNITY_LOG_FATAL_ERROR
 			logger.LogLevel = LogLevel.FatalError;
-#elif HOLLYWOOD_UNITY_LOG_TRACE_NONE
+#elif HOLLYWOOD_UNITY_LOG_NONE
 			logger.LogLevel = LogLevel.None;
 #endif
 			Log.Logger = logger;
