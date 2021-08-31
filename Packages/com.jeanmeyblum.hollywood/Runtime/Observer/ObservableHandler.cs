@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Hollywood.Runtime.Observer
+namespace Hollywood.Observer
 {
 	/// <summary>
 	/// System usually owned and needed by an IObservable system to delegate the implementation

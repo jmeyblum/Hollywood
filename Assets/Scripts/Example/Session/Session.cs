@@ -1,4 +1,3 @@
-using Hollywood.Runtime;
 
 namespace Hollywood.Example
 {

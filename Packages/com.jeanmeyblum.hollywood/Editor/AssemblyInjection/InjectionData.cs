@@ -1,5 +1,4 @@
-﻿
-using Mono.Cecil;
+﻿using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,12 +7,12 @@ namespace Hollywood.Editor.AssemblyInjection
 {
 	internal class InjectionData
 	{
-		private const string GetInstanceMethodName = nameof(Hollywood.Runtime.Injector.GetInstance);
-		private const string GetInstancesMethodName = nameof(Hollywood.Runtime.Injector.GetInstances);
-		private const string AddInstanceMethodName = nameof(Hollywood.Runtime.Injector.Advanced.AddInstance);
-		private const string AddInstancesMethodName = nameof(Hollywood.Runtime.Injector.Advanced.AddInstances);
+		private const string GetInstanceMethodName = nameof(Hollywood.Injector.GetInstance);
+		private const string GetInstancesMethodName = nameof(Hollywood.Injector.GetInstances);
+		private const string AddInstanceMethodName = nameof(Hollywood.Injector.Advanced.AddInstance);
+		private const string AddInstancesMethodName = nameof(Hollywood.Injector.Advanced.AddInstances);
 
-		private readonly string InjectorAdvancedTypeName = $"{AssemblyInjector.InjectorType.FullName}/{nameof(Hollywood.Runtime.Injector.Advanced)}";
+		private readonly string InjectorAdvancedTypeName = $"{AssemblyInjector.InjectorType.FullName}/{nameof(Hollywood.Injector.Advanced)}";
 
 		public IEnumerable<InjectableType> InjectableTypes { get; private set; }
 		public IEnumerable<TypeReference> InjectedTypes { get; private set; }
@@ -57,7 +56,8 @@ namespace Hollywood.Editor.AssemblyInjection
 				if (hasBaseInjectableType)
 				{
 					injectableType.InjectableBaseType = injectableType.Type.BaseType;
-				} else if (injectableType.Type.CustomAttributes.Where(attribute => attribute.AttributeType.FullName == AssemblyInjector.InheritsFromInjectableAttributeType.FullName).FirstOrDefault() is CustomAttribute inheritsFromInjectableAttribute)
+				}
+				else if (injectableType.Type.CustomAttributes.Where(attribute => attribute.AttributeType.FullName == AssemblyInjector.InheritsFromInjectableAttributeType.FullName).FirstOrDefault() is CustomAttribute inheritsFromInjectableAttribute)
 				{
 					var baseType = inheritsFromInjectableAttribute.ConstructorArguments.FirstOrDefault().Value as TypeReference ?? injectableType.Type.BaseType;
 

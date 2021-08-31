@@ -10,7 +10,7 @@ namespace Hollywood.Editor.UnityAssemblyInjection
 		private readonly List<InjectableMonoBehaviour> injectableMonoBehaviours = new List<InjectableMonoBehaviour>();
 		public IEnumerable<InjectableMonoBehaviour> InjectableMonoBehaviours => injectableMonoBehaviours;
 
-		public UnityInjectionData(ModuleDefinition moduleDefinition) 
+		public UnityInjectionData(ModuleDefinition moduleDefinition)
 			: base(moduleDefinition)
 		{
 		}
@@ -25,7 +25,7 @@ namespace Hollywood.Editor.UnityAssemblyInjection
 				InjectableMonoBehaviour injectableMonoBehaviour = new InjectableMonoBehaviour(typeDefinition);
 
 				injectableMonoBehaviours.Add(injectableMonoBehaviour);
-				injectedTypes.Add(typeDefinition);				
+				injectedTypes.Add(typeDefinition);
 			}
 		}
 	}

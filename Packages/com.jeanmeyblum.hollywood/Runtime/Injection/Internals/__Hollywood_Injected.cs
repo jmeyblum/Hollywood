@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel;
 
-namespace Hollywood.Runtime.Internal
+namespace Hollywood.Internal
 {
 	[EditorBrowsable(EditorBrowsableState.Never)]
 	public interface __Hollywood_Injected

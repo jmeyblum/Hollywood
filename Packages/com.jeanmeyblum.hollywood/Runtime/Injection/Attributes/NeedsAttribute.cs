@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Hollywood.Runtime
+namespace Hollywood
 {
 	/// <summary>
 	/// Field attribute used to automatically resolve a dependency to a system existing at the same level or higher in the hierarchy 
@@ -12,7 +12,7 @@ namespace Hollywood.Runtime
 		private readonly bool _ignoreInitialization;
 
 		public NeedsAttribute()
-		{}
+		{ }
 
 		public NeedsAttribute(bool ignoreInitialization)
 		{

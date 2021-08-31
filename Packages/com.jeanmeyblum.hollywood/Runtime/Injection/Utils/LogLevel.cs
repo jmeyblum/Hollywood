@@ -1,5 +1,5 @@
 
-namespace Hollywood.Runtime
+namespace Hollywood
 {
 	public enum LogLevel
 	{
@@ -16,7 +16,7 @@ namespace Hollywood.Runtime
 		Warning = WarningOnly | ErrorOnly | FatalErrorOnly,
 		Message = MessageOnly | WarningOnly | ErrorOnly | FatalErrorOnly,
 		Trace = TraceOnly | MessageOnly | WarningOnly | ErrorOnly | FatalErrorOnly,
-			
+
 		All = Trace,
 	}
 }

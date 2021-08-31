@@ -1,5 +1,6 @@
 {
-    "name": "Hollywood.Runtime.UnityInjection",
+    "name": "Hollywood.Unity",
+    "rootNamespace": "",
     "references": [
         "GUID:c43b95b88c212a8499e9e59de5572223"
     ],

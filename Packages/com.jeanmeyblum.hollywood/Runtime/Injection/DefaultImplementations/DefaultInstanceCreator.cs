@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Hollywood.Runtime
+namespace Hollywood
 {
 	public class DefaultInstanceCreator : IInstanceCreator
 	{

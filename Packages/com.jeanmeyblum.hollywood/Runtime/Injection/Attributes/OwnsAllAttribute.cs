@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Hollywood.Runtime
+namespace Hollywood
 {
 	/// <summary>
 	/// Class attribute to make this class instance owns all types assignable for the specified type.

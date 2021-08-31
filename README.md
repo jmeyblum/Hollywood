@@ -30,11 +30,11 @@ This will create a new ­­­­­`Injection Context` each time you enter play mo
 
 ### Manual Setup
 
-Before your application try to use the framework, you need to assign the static injection context instance to `Hollywood.Runtime.Injector.InjectionContext`. You can do so yourself or make use of the helper methods find in `Hollywood.Runtime.Helper` and `Hollywood.Runtime.UnityInjection.Helper`.
+Before your application try to use the framework, you need to assign the static injection context instance to `Hollywood.Injector.InjectionContext`. You can do so yourself or make use of the helper methods find in `Hollywood.Helper` and `Hollywood.Unity.Helper`.
 
-The easiest way to do so is to call `Hollywood.Runtime.UnityInjection.Helper.InitializeHollywoodWithDefaultForUnity()` from your code before trying to use the framework.
+The easiest way to do so is to call `Hollywood.Unity.Helper.InitializeHollywoodWithDefaultForUnity()` from your code before trying to use the framework.
 
-**Note:** Some systems of the framework like the `ObservableHandler` require that the injection context have a `ILogger` instance and a `IAsserter` instance ready. This is the case when using the [Automatic Setup](#automatic-setup) or when using `Hollywood.Runtime.UnityInjection.Helper.InitializeHollywoodWithDefaultForUnity()`. Otherwise, be sure that the systems using the framework have access to a `ILogger` and a `IAsserter` higher in their hierarchies.
+**Note:** Some systems of the framework like the `ObservableHandler` require that the injection context have a `ILogger` instance and a `IAsserter` instance ready. This is the case when using the [Automatic Setup](#automatic-setup) or when using `Hollywood.Unity.Helper.InitializeHollywoodWithDefaultForUnity()`. Otherwise, be sure that the systems using the framework have access to a `ILogger` and a `IAsserter` higher in their hierarchies.
 
 ### Logs and Assert
 
@@ -43,11 +43,11 @@ To enable asserts and logs for the framework internal operations you need to add
 - HOLLYWOOD_ASSERT
 - HOLLYWOOD_LOG
 
-If you used the [Automatic Setup](#automatic-setup) the framework will already use default implementations for its assertions and logs. Otherwise, you will need to assign your own instances to `Hollywood.Runtime.Log.Logger` and `Hollywood.Runtime.Assert.Asserter` before creating and setting up your injection context.
+If you used the [Automatic Setup](#automatic-setup) the framework will already use default implementations for its assertions and logs. Otherwise, you will need to assign your own instances to `Hollywood.Log.Logger` and `Hollywood.Assert.Asserter` before creating and setting up your injection context.
 
 #### Log Level
 
-You can switch to different log levels from the `ILogger` instance. If you used the [Automatic Setup](#automatic-setup) or used the `Hollywood.Runtime.UnityInjection.Helper.InitializeHollywoodWithDefaultForUnity()` method to initialized the framework, you can also specified one of the following scripting define symbols to set the initial log level:
+You can switch to different log levels from the `ILogger` instance. If you used the [Automatic Setup](#automatic-setup) or used the `Hollywood.Unity.Helper.InitializeHollywoodWithDefaultForUnity()` method to initialized the framework, you can also specified one of the following scripting define symbols to set the initial log level:
 
 - HOLLYWOOD_UNITY_LOG_TRACE
 - HOLLYWOOD_UNITY_LOG_MESSAGE
@@ -141,7 +141,7 @@ This section focuses on some more advanced features of the framework. What was d
 
 There might be cases where you want to be able to use a system through the framework that was not created by it. This can happen when you don't have control over the system's creation or when the system is created before the framework was ready to be used.
 
-When this is the case, you can use `Hollywood.Runtime.Injector.AddExternalInstance<T>(...)` to add your instance to the framework. Instances added can then be retrieved then from other system as needs dependencies.
+When this is the case, you can use `Hollywood.Injector.AddExternalInstance<T>(...)` to add your instance to the framework. Instances added can then be retrieved then from other system as needs dependencies.
 
 #### IgnoreTypeAttribute, IncludeTypeAttribute and InheritsFromInjectableAttribute
 

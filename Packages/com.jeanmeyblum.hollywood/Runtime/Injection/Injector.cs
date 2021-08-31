@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("Hollywood.Runtime.UnityInjection")]
+[assembly: InternalsVisibleTo("Hollywood.Unity")]
 
-namespace Hollywood.Runtime
+namespace Hollywood
 {
 	public static class Injector
 	{

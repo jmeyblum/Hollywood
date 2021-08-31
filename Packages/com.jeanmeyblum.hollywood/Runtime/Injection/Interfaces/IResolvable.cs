@@ -1,4 +1,5 @@
-﻿namespace Hollywood.Runtime
+﻿
+namespace Hollywood
 {
 	/// <summary>
 	/// Interface that can be implemented on system available to injection.

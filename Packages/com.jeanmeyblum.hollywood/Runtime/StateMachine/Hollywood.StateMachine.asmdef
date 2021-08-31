@@ -1,8 +1,9 @@
 {
-    "name": "Hollywood.Runtime.Observer",
+    "name": "Hollywood.StateMachine",
     "rootNamespace": "",
     "references": [
-        "GUID:c43b95b88c212a8499e9e59de5572223"
+        "GUID:c43b95b88c212a8499e9e59de5572223",
+        "GUID:ce727a4f106c1f44da29fbd2ea4e46b5"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

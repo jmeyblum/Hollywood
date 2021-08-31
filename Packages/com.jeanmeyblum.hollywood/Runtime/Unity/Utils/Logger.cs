@@ -1,4 +1,5 @@
-﻿namespace Hollywood.Runtime.UnityInjection
+﻿
+namespace Hollywood.Unity
 {
 	[IncludeType]
 	public class Logger : ILogger

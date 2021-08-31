@@ -1,6 +1,6 @@
 using System;
 
-namespace Hollywood.Runtime
+namespace Hollywood
 {
 	/// <summary>
 	/// Class attribute to force the default TypeResolver to know the type this attribute is used on.

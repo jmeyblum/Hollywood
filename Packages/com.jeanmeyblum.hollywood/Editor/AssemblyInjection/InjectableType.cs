@@ -1,5 +1,4 @@
-﻿
-using Mono.Cecil;
+﻿using Mono.Cecil;
 using System.Collections.Generic;
 
 namespace Hollywood.Editor.AssemblyInjection

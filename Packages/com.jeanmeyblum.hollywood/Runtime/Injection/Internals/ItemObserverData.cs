@@ -1,15 +1,15 @@
 using System;
 using System.Reflection;
 
-namespace Hollywood.Runtime.Internal
+namespace Hollywood.Internal
 {
 	public abstract class ItemObserverData
 	{
-		public abstract void OnItemCreated(object item); 
+		public abstract void OnItemCreated(object item);
 		public abstract void OnItemDestroyed(object item);
 	}
 
-	public class ItemObserverData<T> : ItemObserverData where T: class
+	public class ItemObserverData<T> : ItemObserverData where T : class
 	{
 		private static readonly MethodInfo OnItemCreatedMethodInfo = typeof(IItemObserver<T>).GetMethod(nameof(IItemObserver<T>.OnItemCreated), BindingFlags.Instance | BindingFlags.Public);
 		private static readonly MethodInfo OnItemDestroyMethodInfo = typeof(IItemObserver<T>).GetMethod(nameof(IItemObserver<T>.OnItemDestroyed), BindingFlags.Instance | BindingFlags.Public);

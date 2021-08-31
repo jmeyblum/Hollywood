@@ -1,13 +1,10 @@
-using Hollywood.Runtime;
-using Hollywood.Runtime.StateMachine;
-using System.Threading;
-using System.Threading.Tasks;
-using UnityEngine;
+using Hollywood.StateMachine;
 
 namespace Hollywood.Example
 {
 	[Owns(typeof(Game))]
 	public class SessionGameState : IState
 	{
+
 	}
 }

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Hollywood.Runtime
+namespace Hollywood
 {
 	/// <summary>
 	/// Responsible for getting type information.

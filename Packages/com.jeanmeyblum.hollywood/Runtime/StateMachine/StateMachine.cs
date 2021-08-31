@@ -1,8 +1,8 @@
-using Hollywood.Runtime.Observer;
+using Hollywood.Observer;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Hollywood.Runtime.StateMachine
+namespace Hollywood.StateMachine
 {
 	/// <summary>
 	/// A flat state machine that can transitioned from state to state.
@@ -13,7 +13,7 @@ namespace Hollywood.Runtime.StateMachine
 	[Owns(typeof(ObservableHandler<StateMachineEvent>))]
 	public class StateMachine<TInitialState> : IInitializable, IObservable<StateMachineEvent> where TInitialState : class, IState
 	{
-		public IState State { get; private set; } 
+		public IState State { get; private set; }
 
 		[Needs]
 		private ObservableHandler<StateMachineEvent> _observableHandler;

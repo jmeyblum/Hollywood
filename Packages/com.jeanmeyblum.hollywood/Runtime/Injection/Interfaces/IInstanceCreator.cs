@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Hollywood.Runtime
+namespace Hollywood
 {
 	/// <summary>
 	/// Responsible for creating an object for the specified type.

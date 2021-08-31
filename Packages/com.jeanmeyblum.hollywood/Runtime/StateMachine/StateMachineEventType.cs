@@ -1,4 +1,5 @@
-namespace Hollywood.Runtime.StateMachine
+
+namespace Hollywood.StateMachine
 {
 	public enum StateMachineEventType
 	{

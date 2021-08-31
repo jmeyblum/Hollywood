@@ -1,4 +1,5 @@
-﻿namespace Hollywood.Runtime
+﻿
+namespace Hollywood
 {
 	/// <summary>
 	/// Interface used by the injection system for assertion.

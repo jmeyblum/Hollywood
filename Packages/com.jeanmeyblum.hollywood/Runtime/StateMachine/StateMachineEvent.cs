@@ -1,6 +1,6 @@
 using System;
 
-namespace Hollywood.Runtime.StateMachine
+namespace Hollywood.StateMachine
 {
 	public abstract class StateMachineEvent
 	{

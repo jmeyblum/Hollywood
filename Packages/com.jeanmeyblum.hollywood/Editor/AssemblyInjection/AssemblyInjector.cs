@@ -1,19 +1,16 @@
-﻿using System.Collections.Generic;
+﻿using Hollywood.Internal;
 using Mono.Cecil;
-using System;
-using System.Linq;
-using Hollywood.Runtime;
 using Mono.Cecil.Cil;
-using Hollywood.Runtime.Internal;
 using Mono.Collections.Generic;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Hollywood.Editor.UnityAssemblyInjection")]
 
 namespace Hollywood.Editor.AssemblyInjection
 {
-	// TODO: validate that __Hollywood_Injected is not used by user
-
 	internal class AssemblyInjector
 	{
 		internal static readonly Type InjectorType = typeof(Injector);
@@ -79,7 +76,7 @@ namespace Hollywood.Editor.AssemblyInjection
 			{
 				Result = InjectionResult.Failed;
 
-				throw new InvalidOperationException($"Assembly {assemblyDefinition.Name} was already injected!");
+				throw new AssemblyAlreadyInjectedException($"Assembly {assemblyDefinition.Name} was already injected.");
 			}
 
 			// For Owners
@@ -372,7 +369,7 @@ namespace Hollywood.Editor.AssemblyInjection
 				foreach (var parameter in declaringType.GenericParameters)
 				{
 					instanceType.GenericArguments.Add(parameter);
-				}				
+				}
 			}
 
 			foreach (var neededField in injectableType.NeededTypes)
@@ -387,7 +384,7 @@ namespace Hollywood.Editor.AssemblyInjection
 
 				resolveMethod.Body.Instructions.Add(Instruction.Create(OpCodes.Call, resolveDependencyMethodReference));
 
-				FieldReference field = neededField.Key; 
+				FieldReference field = neededField.Key;
 				if (declaringType.HasGenericParameters)
 				{
 					field = new FieldReference(neededField.Key.Name, neededField.Key.FieldType, instanceType);

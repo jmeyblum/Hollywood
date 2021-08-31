@@ -1,5 +1,4 @@
-using Hollywood.Runtime;
-using Hollywood.Runtime.StateMachine;
+using Hollywood.StateMachine;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -31,7 +30,7 @@ namespace Hollywood.Example
 				if (Input.GetKeyDown(KeyCode.R))
 				{
 					_gameStateMachine.TransitionTo<GameBootState>();
-				} 
+				}
 				else if (Input.GetKeyDown(KeyCode.O))
 				{
 					_sessionStateMachine.TransitionTo<SessionBootState>();

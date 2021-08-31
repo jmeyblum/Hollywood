@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 
-namespace Hollywood.Runtime
+namespace Hollywood
 {
 	public interface IInjectionContext : IAdvancedInjectionContext
 	{

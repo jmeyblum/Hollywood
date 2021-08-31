@@ -1,4 +1,5 @@
-﻿namespace Hollywood.Runtime
+﻿
+namespace Hollywood
 {
 	public static class Helper
 	{

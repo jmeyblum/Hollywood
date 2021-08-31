@@ -1,4 +1,5 @@
-﻿namespace Hollywood.Runtime
+﻿
+namespace Hollywood
 {
 	/// <summary>
 	/// Interface which allows to define a class as a module.
@@ -7,5 +8,7 @@
 	/// level as the owning module.
 	/// </summary>
 	public interface IModule
-	{ }
+	{
+
+	}
 }

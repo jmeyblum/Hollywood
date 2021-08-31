@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace Hollywood.Runtime.Internal
+namespace Hollywood.Internal
 {
 	public class Hierarchy<T> where T : class, new()
 	{
@@ -40,7 +40,7 @@ namespace Hollywood.Runtime.Internal
 				ParentToChildren.Add(parent, parentChildren);
 			}
 
-			parentChildren.Add(element);			
+			parentChildren.Add(element);
 		}
 
 		public void Remove(T element, bool recursively = false)

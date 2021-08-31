@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
 
-namespace Hollywood.Runtime
+namespace Hollywood
 {
 	public static class Assert
 	{

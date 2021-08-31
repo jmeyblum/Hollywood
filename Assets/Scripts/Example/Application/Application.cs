@@ -1,5 +1,4 @@
 using UnityEngine;
-using Hollywood.Runtime;
 
 namespace Hollywood.Example
 {

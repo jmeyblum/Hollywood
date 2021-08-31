@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-namespace Hollywood.Runtime.UnityInjection
+namespace Hollywood.Unity
 {
 	public static class Helper
 	{
@@ -15,7 +15,7 @@ namespace Hollywood.Runtime.UnityInjection
 
 			SetupUnitySpecificImplementations();
 
-			Injector.InjectionContext = Hollywood.Runtime.Helper.CreateDefaultInjectionContext();
+			Injector.InjectionContext = Hollywood.Helper.CreateDefaultInjectionContext();
 
 			Injector.Advanced.AddExternalInstance<ILogger>(Log.Logger);
 			Injector.Advanced.AddExternalInstance<IAsserter>(Assert.Asserter);

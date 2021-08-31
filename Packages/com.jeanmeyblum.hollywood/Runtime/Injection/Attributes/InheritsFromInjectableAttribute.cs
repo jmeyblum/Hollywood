@@ -1,6 +1,6 @@
 using System;
 
-namespace Hollywood.Runtime
+namespace Hollywood
 {
 	/// <summary>
 	/// Class attribute to hint the injection to resolve parents dependencies.

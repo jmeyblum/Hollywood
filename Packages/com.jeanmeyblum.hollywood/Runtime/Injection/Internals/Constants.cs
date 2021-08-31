@@ -1,4 +1,5 @@
-﻿namespace Hollywood.Runtime.Internal
+﻿
+namespace Hollywood.Internal
 {
 	public static class Constants
 	{

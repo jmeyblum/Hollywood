@@ -31,7 +31,7 @@ namespace Hollywood.Editor.UnityAssemblyInjection
 				{
 					if (File.Exists(assembly.outputPath))
 					{
-						InjectAssemblyIfIncluded(assembly.outputPath);
+						InjectAssemblyIfIncluded(assembly.outputPath, ignoreAlreadyInjectedException: true);
 					}
 				}
 
@@ -49,14 +49,14 @@ namespace Hollywood.Editor.UnityAssemblyInjection
 			InjectAssemblyIfIncluded(assemblyPath);
 		}
 
-		private static void InjectAssemblyIfIncluded(string assemblyPath)
+		private static void InjectAssemblyIfIncluded(string assemblyPath, bool ignoreAlreadyInjectedException = false)
 		{
 			if (!IsIncluded(assemblyPath))
 			{
 				return;
 			}
 
-			Inject(assemblyPath);
+			Inject(assemblyPath, ignoreAlreadyInjectedException);
 		}
 
 		public static bool IsIncluded(string assemblyPath)
@@ -73,23 +73,33 @@ namespace Hollywood.Editor.UnityAssemblyInjection
 			}
 		}
 
-		public static void Inject(string assemblyPath)
+		public static void Inject(string assemblyPath, bool ignoreAlreadyInjectedException = false)
 		{
 			var assemblyResolver = new DefaultAssemblyResolver();
-			foreach(var path in CompilationPipeline.GetPrecompiledAssemblyPaths(CompilationPipeline.PrecompiledAssemblySources.All).Select(p => Path.GetDirectoryName(p)).Distinct().Where(p => p != null))
+			foreach (var path in CompilationPipeline.GetPrecompiledAssemblyPaths(CompilationPipeline.PrecompiledAssemblySources.All).Select(p => Path.GetDirectoryName(p)).Distinct().Where(p => p != null))
 			{
 				assemblyResolver.AddSearchDirectory(path);
 			}
 
 			using (var assemblyStream = new FileStream(assemblyPath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite))
 			{
-				using (var assemblyDefinition = AssemblyDefinition.ReadAssembly(assemblyStream, new ReaderParameters(ReadingMode.Immediate) { ReadSymbols = true, ReadWrite = true, AssemblyResolver = assemblyResolver, SymbolReaderProvider = new PdbReaderProvider()}))
+				using (var assemblyDefinition = AssemblyDefinition.ReadAssembly(assemblyStream, new ReaderParameters(ReadingMode.Immediate) { ReadSymbols = true, ReadWrite = true, AssemblyResolver = assemblyResolver, SymbolReaderProvider = new PdbReaderProvider() }))
 				{
-					var injectionResult = UnityAssemblyInjector.Inject(assemblyDefinition);
-
-					if (injectionResult == InjectionResult.Modified)
+					try
 					{
-						assemblyDefinition.Write(assemblyStream, new WriterParameters { WriteSymbols = true, SymbolWriterProvider = new PdbWriterProvider()});
+						var injectionResult = UnityAssemblyInjector.Inject(assemblyDefinition);
+
+						if (injectionResult == InjectionResult.Modified)
+						{
+							assemblyDefinition.Write(assemblyStream, new WriterParameters { WriteSymbols = true, SymbolWriterProvider = new PdbWriterProvider() });
+						}
+					}
+					catch (AssemblyAlreadyInjectedException exception)
+					{
+						if (!ignoreAlreadyInjectedException)
+						{
+							throw exception;
+						}
 					}
 				}
 			}

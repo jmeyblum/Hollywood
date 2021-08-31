@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Hollywood.Runtime.Internal
+namespace Hollywood.Internal
 {
 	public class InstanceData
 	{

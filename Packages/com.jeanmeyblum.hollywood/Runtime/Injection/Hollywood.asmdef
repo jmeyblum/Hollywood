@@ -1,5 +1,6 @@
 {
-    "name": "Hollywood.Runtime",
+    "name": "Hollywood",
+    "rootNamespace": "",
     "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],

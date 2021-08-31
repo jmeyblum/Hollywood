@@ -1,9 +1,9 @@
-﻿using Hollywood.Runtime.Internal;
+﻿using Hollywood.Internal;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Hollywood.Runtime
+namespace Hollywood
 {
 	public class DefaultTypeResolver : ITypeResolver
 	{
@@ -18,7 +18,7 @@ namespace Hollywood.Runtime
 
 			foreach (var assembly in assemblies)
 			{
-				if(!assembly.GetCustomAttributes(typeof(__Hollywood_PostProcessedAttribute), false).Any())
+				if (!assembly.GetCustomAttributes(typeof(__Hollywood_PostProcessedAttribute), false).Any())
 				{
 					continue;
 				}
@@ -91,7 +91,7 @@ namespace Hollywood.Runtime
 
 						relatedParentType.Add(baseType);
 					}
-					
+
 					baseType = baseType.BaseType;
 				}
 			}

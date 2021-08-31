@@ -1,6 +1,5 @@
 using Hollywood.Editor.AssemblyInjection;
-using Hollywood.Runtime;
-using Hollywood.Runtime.UnityInjection;
+using Hollywood.Unity;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System;
@@ -18,9 +17,9 @@ namespace Hollywood.Editor.UnityAssemblyInjection
 		private MethodReference NotifyItemCreationMethodReference;
 		private MethodReference NotifyItemDestructionMethodReference;
 
-		protected UnityAssemblyInjector(AssemblyDefinition assemblyDefinition) 
+		protected UnityAssemblyInjector(AssemblyDefinition assemblyDefinition)
 			: base(assemblyDefinition)
-		{}
+		{ }
 
 		protected override void Inject()
 		{

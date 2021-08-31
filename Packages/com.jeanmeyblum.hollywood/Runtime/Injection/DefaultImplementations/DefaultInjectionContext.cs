@@ -1,4 +1,4 @@
-﻿using Hollywood.Runtime.Internal;
+﻿using Hollywood.Internal;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -6,7 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Hollywood.Runtime
+namespace Hollywood
 {
 	public class DefaultInjectionContext : IInjectionContext
 	{
@@ -45,7 +45,7 @@ namespace Hollywood.Runtime
 			while (parent != null)
 			{
 				dependency = FindInnerDependency<T>(parent, child);
-				if(dependency != null)
+				if (dependency != null)
 				{
 					break;
 				}
@@ -57,7 +57,7 @@ namespace Hollywood.Runtime
 			if (dependency is null)
 			{
 				Assert.Throw($"No dependency of type {typeof(T).Name} found for instance: {instance}.");
-			} 
+			}
 			else
 			{
 				Log.LogTrace($"Dependency {dependency} found for needed type {typeof(T).Name} for {instance} ({instance?.GetType().Name}).");
@@ -87,7 +87,7 @@ namespace Hollywood.Runtime
 
 			foreach (var children in Instances.GetChildren(current))
 			{
-				if(children == childToIgnore)
+				if (children == childToIgnore)
 				{
 					continue;
 				}
@@ -96,7 +96,7 @@ namespace Hollywood.Runtime
 				{
 					return (T)children;
 				}
-				
+
 				if (children is IModule module)
 				{
 					foreach (var moduleChildren in Instances.GetChildren(module))
@@ -172,7 +172,7 @@ namespace Hollywood.Runtime
 
 						disposable.Dispose();
 					}
-					catch(Exception e)
+					catch (Exception e)
 					{
 						Log.LogError(e);
 					}
@@ -236,7 +236,7 @@ namespace Hollywood.Runtime
 
 					return (T)child;
 				}
-			}			
+			}
 
 			var instanceType = TypeResolver.Get<T>();
 
@@ -358,13 +358,13 @@ namespace Hollywood.Runtime
 					{
 						resolvable.Resolve();
 					}
-					catch(Exception e)
+					catch (Exception e)
 					{
 						Log.LogError(e);
 					}
 				}
 			}
-			catch(Exception e)
+			catch (Exception e)
 			{
 				Log.LogFatalError(e);
 			}
