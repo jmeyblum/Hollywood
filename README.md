@@ -16,7 +16,7 @@ Modify the `manifest.json` file of your Unity project under the Packages folder 
 
 ## Setup
 
-Though this framework was primarly made for Unity, the framework was divided into two kind of assemblies, one requiring Unity references and the other working without dependencies to the Unity engine. The goal is to make it agnostic enough so it could be forked and used in a non-Unity project without too much work.
+Though this framework is primarily made for Unity, the framework is divided into two kind of assemblies, one requiring Unity references and the other working without dependencies to the Unity engine. The goal is to make it agnostic enough so it could be forked and used in a non-Unity project without too much work.
 
 This documentation though will assume a setup for a Unity project.
 
@@ -26,13 +26,13 @@ Simply add the following scripting define symbol to your project's player settin
 
 - HOLLYWOOD_UNITY_AUTO_SETUP
 
-This will create a new ­­­­­`Injection Context` each time you enter play mode which already contains a `ILogger` and a `IAsserter` insance which are set also as the logger and asserter for the framework operations.
+This will create a new ­­­­­`Injection Context` each time you enter play mode which already contains a `ILogger` and a `IAsserter` instance which are set also as the logger and asserter for the framework operations.
 
 ### Manual Setup
 
 Before your application try to use the framework, you need to assign the static injection context instance to `Hollywood.Runtime.Injector.InjectionContext`. You can do so yourself or make use of the helper methods find in `Hollywood.Runtime.Helper` and `Hollywood.Runtime.UnityInjection.Helper`.
 
-The easiest way is to call `Hollywood.Runtime.UnityInjection.Helper.InitializeHollywoodWithDefaultForUnity()` from your code before trying to use the framework.
+The easiest way to do so is to call `Hollywood.Runtime.UnityInjection.Helper.InitializeHollywoodWithDefaultForUnity()` from your code before trying to use the framework.
 
 **Note:** Some systems of the framework like the `ObservableHandler` require that the injection context have a `ILogger` instance and a `IAsserter` instance ready. This is the case when using the [Automatic Setup](#automatic-setup) or when using `Hollywood.Runtime.UnityInjection.Helper.InitializeHollywoodWithDefaultForUnity()`. Otherwise, be sure that the systems using the framework have access to a `ILogger` and a `IAsserter` higher in their hierarchies.
 
@@ -47,7 +47,7 @@ If you used the [Automatic Setup](#automatic-setup) the framework will already u
 
 #### Log Level
 
-You can switch to different log levels from the `ILogger` instance. If you have used the [Automatic Setup](#automatic-setup) or used the `Hollywood.Runtime.UnityInjection.Helper.InitializeHollywoodWithDefaultForUnity()` method to initialized the framework, you can also specified one of the following scripting define symbol to set the initial log level:
+You can switch to different log levels from the `ILogger` instance. If you used the [Automatic Setup](#automatic-setup) or used the `Hollywood.Runtime.UnityInjection.Helper.InitializeHollywoodWithDefaultForUnity()` method to initialized the framework, you can also specified one of the following scripting define symbols to set the initial log level:
 
 - HOLLYWOOD_UNITY_LOG_TRACE
 - HOLLYWOOD_UNITY_LOG_MESSAGE
@@ -60,7 +60,7 @@ Each of them will activate the corresponding log level and above so there is no 
 
 ## Concept
 
-This framework main goal is to help you organize your systems following the inversion of control principle and provide you with tools like C# attributes and interfaces to easily and explicitly create a hierachy for your systems to live in.
+This framework main goal is to help you organize your systems following the inversion of control principle and provide you with tools like C# attributes and interfaces to easily and explicitly create a hierarchy for your systems to live in.
 
 It is a dependency injection framework with a twist: instead of choosing a lifetime type (ie: Transient, Scoped, Singleton) for each system, you instead choose which system or module is owning which other systems, creating a hierarchy of systems.
 
@@ -70,15 +70,15 @@ When a system needs another system for its operations, the injection framework s
 
 ### Owns and Needs
 
-Before a system can access any other systems as dependencies, those systems needs to be owned. You can declare what a system owns by adding `[Owns(typeof(T))]` attributes on top of its class, where `T` is the type of a system beeing owned.
+Before a system can access any other systems as dependencies, those systems needs to be owned. You can declare what a system owns by adding `[Owns(typeof(T))]` attributes on top of its class, where `T` is the type of a system being owned.
 
 When a system needs to access another system, it can add a `[Needs]` attribute on top of a field of a system's type it needs to access to. This field will then automatically be assigned to the proper instance of the needed system, if the system exists at the same or higher hierarchy where the declaring system is owned.
 
-You can group together owned systems over a class implementing the `IModule` interface. When you do so all systems owned by the module are considered to be at the same hierarchy level as where the module itself is owned, and recursively if your module owns other modules. This lets you organize your systems together per concept but still make them accessible for system outside of your module but at a deeper hierarchy level. Note that a module can't have any dependency itself.
+You can group together owned systems over a class implementing the `IModule` interface. When you do so all systems owned by the module are considered to be at the same hierarchy level as where the module itself is owned, and recursively if your module owns other modules. This lets you organize your systems together per concept but still makes them accessible for systems outside of your module but at a deeper hierarchy level. Note that a module can't have any dependency itself.
 
 ### State Machine
 
-The framework contains a state machine class, `StateMachine<TInitialState>`, that you can derive from and use to transition from state to state. This lets you to have systems with a specific and controlled lifetime by having states owning different systems. When you transition from one state to another, all systems owned by the previous states get disposed and the ones from the new state get created.
+The framework contains a state machine class, `StateMachine<TInitialState>`, that you can derive from and use to transition from state to state. This allows you to have systems with a specific and controlled lifetime by having states owning different systems. When you transition from one state to another, all systems owned by the previous states get disposed and the ones from the new state get created.
 
 This is useful when some systems in your application should only exist when the context is appropriate.
 
@@ -115,15 +115,15 @@ This is useful to avoid having wrongful dependencies when a specific system want
 
 Where [Observers](#observers) lets you send and received events from systems to systems, the item observer system is used to send events when object gets created and destroyed.
 
-When a system wants to be notified about an instance creation and destruction for a specific type, it can implement the `IItemObserver<T>` interface. Note that it won't received any creation notification for instances that already exist before the system was initialized.
+When a system wants to be notified about an instance creation and destruction for a specific type, it can implement the `IItemObserver<T>` interface. Note that it won't received any creation notification for instances that already exist before the system was fully initialized.
 
-When an instance of a specific type wants to notify its creation and destruction it should use the `Injector.Advanced.NotifyItemCreation` and `Injector.Advanced.NotifyItemDestruction` when it gets created and then destroyed.
+When an instance of a specific type wants to notify its creation and destruction it should use the `Injector.Advanced.NotifyItemCreation(...)` and `Injector.Advanced.NotifyItemDestruction(...)` methods when it gets created and then destroyed.
 
 #### ObservedMonoBehaviour
 
 You can use the `[ObservedMonoBehaviour]` attribute on top of a `MonoBehaviour` derived type to automatically notify item creation when the component is awoken and when it is destroyed, without having to manually call the injector.
 
-This is useful to have a way of communication between objects coming from prefabs and scenes and pure C# systems. It also allows to give them access to those systems. That being said you should be careful if you decide to let your MonoBehaviour keep a reference to a system to make sure the lifetime of the MonoBehaviour is shorter than the systems it is using. The ideal solution beeing to make your systems control, keep track and use your MonoBehaviour and not the opposite.
+This is useful to have a way of communication between objects coming from prefabs and scenes and pure C# systems. It also allows to give them access to those systems. That being said you should be careful if you decide to let your MonoBehaviour keep a reference to a system to make sure the lifetime of the MonoBehaviour is shorter than the systems it is using. The ideal solution being to make your systems control, keep track and use your MonoBehaviours and not the opposite.
 
 ### IInitializable and IUpdatable
 
@@ -139,7 +139,7 @@ This section focuses on some more advanced features of the framework. What was d
 
 #### Adding External Instance
 
-There might be cases where you want to be able to use a system through the framework that were not created by it. This can happen when you don't have control over the system's creation or when the system is created before the framework was ready to be used.
+There might be cases where you want to be able to use a system through the framework that was not created by it. This can happen when you don't have control over the system's creation or when the system is created before the framework was ready to be used.
 
 When this is the case, you can use `Hollywood.Runtime.Injector.AddExternalInstance<T>(...)` to add your instance to the framework. Instances added can then be retrieved then from other system as needs dependencies.
 
@@ -149,9 +149,9 @@ Due to technical architecture choices made to improve the time taken to inject c
 
 The `[IgnoreType]` attribute can be used on top of class to make sure the framework doesn't choose this type when resolving a type.
 
-The `[IncludeType]` attribute can be used when you have a type implementing an interface used within your systems but the class type and the interface lives in different assemblies and the class type doesn't have any owns or needs. This comes from the fact that when injecting an assembly, the framework only consider types and interfaces from within the assembly for which it can deduce if they will be used through injection. It doesn't have access to any details concerning types in other assemblies.
+The `[IncludeType]` attribute can be used when you have a class type implementing an interface used within your systems but the class type and the interface lives in different assemblies and the class type doesn't have any owns or needs. This comes from the fact that when injecting an assembly, the framework only consider types and interfaces from within the assembly for which it can deduce if they will be used through injection. It doesn't have access to any details concerning types in other assemblies.
 
-The `[InheritsFromInjectable]` attribute can be used when you have a type inheriting from a type which has its own owns or needs when the base type is not a direct parent of the derived type or when the base type is located in a different assembly. To say it differently, you don't need this attribute when your type directly derives from a type located in the same assembly and which have owns and needs, otherwise you need this attribute. If the base type having owns and needs is not the direct parent of the type you need to specify in the attribute what is the base type having own and needs. Like for `[IncludeType]` attribute, this is due to the fact that when injecting code in the compiled assembly, the framework doesn't know much about types in other asemblies.
+The `[InheritsFromInjectable]` attribute can be used when you have a type inheriting from a type which has its own owns or needs when the base type is not a direct parent of the derived type or when the base type is located in a different assembly. To say it differently, you don't need this attribute when your type directly derives from a type located in the same assembly and which have owns and needs, otherwise you need this attribute. If the base type having owns and needs is not the direct parent of the type you need to specify in the attribute what is the base type having own and needs. Like for `[IncludeType]` attribute, this is due to the fact that when injecting code in the compiled assembly, the framework doesn't know much about types in other assemblies.
 
 #### OwnsAllAttribute
 
@@ -159,15 +159,15 @@ This attribute is very similar to the `[Owns(typeof(T))]` attribute except that 
 
 #### IResolvable and IDisposable
 
-One of the requirement for this framework was that the code injected by the framework post assembly compilation would also be writtable manually. This can be achieved through the `IResolvable` and `IDisposable` interfaces, both called by the framework.
+One of the requirement for this framework was that the kind code injected by the framework post assembly compilation would also be writeable manually. This can be achieved through the `IResolvable` and `IDisposable` interfaces, both called by the framework.
 
 When injecting a system manually, you usually want to add owned instances from the system's constructor and resolves dependencies (which would otherwise come from `[Needs]` field attributes) from the `IResolvable.Resolve()` method.
 
-The `IDisposable.Dipose()` method can be used both when injecting a system automatically or manually and will be called when a system gets disposed.
+The `IDisposable.Dispose()` method can be used both when injecting a system automatically or manually and will be called when a system gets disposed.
 
 ## Why you should used interfaces for Owns and Needs
 
-You can use both class or interface types for `[Needs]` and `[Owns(typeof(T))]` attributes. The advantages of using interface type though is that you can more easily change the concrete implementation type of your system. This can be useful for testing, platform specific systems or configuration specific systems.
+You can use both class or interface types for `[Needs]` and `[Owns(typeof(T))]` attributes. The advantages of using interface types though is that you can more easily change the concrete implementation type of your systems. This can be useful for testing, platform specific systems or configuration specific systems.
 
 ## How it works
 

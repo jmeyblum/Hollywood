@@ -677,7 +677,7 @@ PlayerSettings:
   webGLDecompressionFallback: 0
   scriptingDefineSymbols:
     1: HOLLYWOOD_UNITY_AUTO_SETUP;HOLLYWOOD_ASSERT;HOLLYWOOD_LOG
-    7: HOLLYWOOD_UNITY_AUTO_SETUP;HOLLYWOOD_LOG;HOLLYWOOD_UNITY_ASSERT
+    7: HOLLYWOOD_UNITY_AUTO_SETUP;HOLLYWOOD_LOG;HOLLYWOOD_ASSERT;HOLLYWOOD_UNITY_LOG_TRACE
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:
