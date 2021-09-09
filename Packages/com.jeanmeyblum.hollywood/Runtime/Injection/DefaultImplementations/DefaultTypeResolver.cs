@@ -44,7 +44,7 @@ namespace Hollywood
 								TypesMap.Add(type, relatedType);
 							}
 
-							if (typeIndex > 0)
+							if (typeIndex > 0 && !types[0].IsInterface)
 							{
 								Type firstType = types[0];
 								relatedType.Add(firstType);
