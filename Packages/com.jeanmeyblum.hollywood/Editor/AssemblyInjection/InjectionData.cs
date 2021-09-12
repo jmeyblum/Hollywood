@@ -131,6 +131,13 @@ namespace Hollywood.Editor.AssemblyInjection
 				injectedTypes.Add(typeDefinition);
 			}
 
+			var isControllerTypes = !typeDefinition.IsInterface && typeDefinition.Interfaces.Any(i => i.InterfaceType.FullName == AssemblyInjector.IControlledItemType.FullName || i.InterfaceType.FullName == AssemblyInjector.IItemControllerType.FullName);
+			if (isControllerTypes)
+			{
+				injectableType ??= new InjectableType(typeDefinition);
+				injectedTypes.Add(typeDefinition);
+			}
+
 			var observedTypes = typeDefinition.Interfaces
 				.Where(i => i.InterfaceType is GenericInstanceType genericInstanceType &&
 					genericInstanceType.HasGenericArguments &&
@@ -138,8 +145,11 @@ namespace Hollywood.Editor.AssemblyInjection
 				.Select(i => (i.InterfaceType as GenericInstanceType).GenericArguments[0]);
 			if (observedTypes.Any())
 			{
-				injectableType ??= new InjectableType(typeDefinition);
-				injectableType.ObservedTypes.UnionWith(observedTypes);
+				if (!typeDefinition.IsInterface)
+				{
+					injectableType ??= new InjectableType(typeDefinition);
+					injectableType.ObservedTypes.UnionWith(observedTypes);
+				}
 				injectedTypes.UnionWith(observedTypes);
 			}
 

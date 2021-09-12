@@ -13,7 +13,7 @@ namespace Hollywood.Observer
 	public class ObservableHandler<T> : IObservable<T> where T : class
 	{
 		[Needs]
-		private ILogger _logger;
+		private ILogger Logger;
 
 		private struct Unsubscriber : IUnsubscriber
 		{
@@ -95,7 +95,7 @@ namespace Hollywood.Observer
 				}
 				catch (Exception e)
 				{
-					_logger.LogError(e);
+					Logger.LogError(e);
 				}
 			}
 

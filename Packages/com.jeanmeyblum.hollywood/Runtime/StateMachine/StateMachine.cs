@@ -16,40 +16,40 @@ namespace Hollywood.StateMachine
 		public IState State { get; private set; }
 
 		[Needs]
-		private ObservableHandler<StateMachineEvent> _observableHandler;
+		private ObservableHandler<StateMachineEvent> ObservableHandler;
 
 		public virtual Task Initialize(CancellationToken token)
 		{
-			_observableHandler.Send(new StateMachineEventPreEnterState(null, typeof(TInitialState)));
+			ObservableHandler.Send(new StateMachineEventPreEnterState(null, typeof(TInitialState)));
 
 			State = Injector.GetInstance<TInitialState>(this);
 
-			_observableHandler.Send(new StateMachineEventPostEnterState(null, State));
+			ObservableHandler.Send(new StateMachineEventPostEnterState(null, State));
 
 			return Task.CompletedTask;
 		}
 
 		public void TransitionTo<TState>() where TState : class, IState
 		{
-			_observableHandler.Send(new StateMachineEventPreExitState(State, typeof(TState)));
+			ObservableHandler.Send(new StateMachineEventPreExitState(State, typeof(TState)));
 
 			Injector.DisposeInstance(State);
 
 			var previousState = State;
 			State = null;
 
-			_observableHandler.Send(new StateMachineEventPostExitState(previousState, typeof(TState)));
+			ObservableHandler.Send(new StateMachineEventPostExitState(previousState, typeof(TState)));
 
-			_observableHandler.Send(new StateMachineEventPreEnterState(previousState, typeof(TState)));
+			ObservableHandler.Send(new StateMachineEventPreEnterState(previousState, typeof(TState)));
 
 			State = Injector.GetInstance<TState>(this);
 
-			_observableHandler.Send(new StateMachineEventPostEnterState(previousState, State));
+			ObservableHandler.Send(new StateMachineEventPostEnterState(previousState, State));
 		}
 
 		public IUnsubscriber Subscribe(IObserver<StateMachineEvent> observer)
 		{
-			return _observableHandler.Subscribe(observer);
+			return ObservableHandler.Subscribe(observer);
 		}
 	}
 }

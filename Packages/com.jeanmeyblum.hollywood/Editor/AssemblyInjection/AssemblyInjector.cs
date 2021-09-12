@@ -1,4 +1,5 @@
-﻿using Hollywood.Internal;
+﻿using Hollywood.Controller;
+using Hollywood.Internal;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Collections.Generic;
@@ -21,6 +22,9 @@ namespace Hollywood.Editor.AssemblyInjection
 		internal static readonly Type IncludeTypeAttributeType = typeof(IncludeTypeAttribute);
 		internal static readonly Type IgnoreTypeAttributeType = typeof(IgnoreTypeAttribute);
 		internal static readonly Type IItemObserverGenericType = typeof(IItemObserver<>);
+
+		internal static readonly Type IControlledItemType = typeof(IControlledItem);
+		internal static readonly Type IItemControllerType = typeof(IItemController);
 
 		private static readonly Type HollywoodInjectedType = typeof(__Hollywood_Injected);
 		private static readonly Type HollywoodItemObserverType = typeof(__Hollywood_ItemObserver);
