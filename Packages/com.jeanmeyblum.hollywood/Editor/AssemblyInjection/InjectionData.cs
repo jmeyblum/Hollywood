@@ -1,4 +1,5 @@
-﻿using Mono.Cecil;
+﻿using Hollywood.Controller;
+using Mono.Cecil;
 using Mono.Cecil.Cil;
 using System.Collections.Generic;
 using System.Linq;
@@ -53,7 +54,10 @@ namespace Hollywood.Editor.AssemblyInjection
 			{
 				var hasBaseInjectableType = injectableTypes.Any(i => i.Type.FullName == injectableType.Type.BaseType.FullName);
 
-				if (hasBaseInjectableType)
+				var isItemController = injectableType.Type.BaseType is TypeSpecification typeSpecification &&
+					(typeSpecification.ElementType?.FullName == AssemblyInjector.ItemControllerType.FullName || typeSpecification.ElementType?.FullName == AssemblyInjector.ItemsControllerType.FullName);
+
+				if (hasBaseInjectableType || isItemController)
 				{
 					injectableType.InjectableBaseType = injectableType.Type.BaseType;
 				}

@@ -26,6 +26,9 @@ namespace Hollywood.Editor.AssemblyInjection
 		internal static readonly Type IControlledItemType = typeof(IControlledItem);
 		internal static readonly Type IItemControllerType = typeof(IItemController);
 
+		internal static readonly Type ItemControllerType = typeof(ItemController<,>);
+		internal static readonly Type ItemsControllerType = typeof(ItemsController<,>);
+
 		private static readonly Type HollywoodInjectedType = typeof(__Hollywood_Injected);
 		private static readonly Type HollywoodItemObserverType = typeof(__Hollywood_ItemObserver);
 

@@ -10,7 +10,7 @@ namespace Hollywood.Controller
 
 		void IItemObserver<T>.OnItemCreated(T item)
 		{
-			Asserter.IsNull(Item);
+			Asserter?.IsNull(Item);
 
 			Item = item;
 
@@ -21,7 +21,7 @@ namespace Hollywood.Controller
 
 		void IItemObserver<T>.OnItemDestroyed(T item)
 		{
-			Asserter.IsTrue(Item == item);
+			Asserter?.IsTrue(Item == item);
 
 			Item = null;
 

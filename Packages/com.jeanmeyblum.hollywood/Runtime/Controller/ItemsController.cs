@@ -12,7 +12,7 @@ namespace Hollywood.Controller
 
 		void IItemObserver<T>.OnItemCreated(T item)
 		{
-			Asserter.IsFalse(ItemsBackingField.Contains(item));
+			Asserter?.IsFalse(ItemsBackingField.Contains(item));
 
 			ItemsBackingField.Add(item);
 
@@ -23,7 +23,7 @@ namespace Hollywood.Controller
 
 		void IItemObserver<T>.OnItemDestroyed(T item)
 		{
-			Asserter.IsTrue(ItemsBackingField.Contains(item));
+			Asserter?.IsTrue(ItemsBackingField.Contains(item));
 
 			ItemsBackingField.Remove(item);
 

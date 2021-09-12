@@ -95,7 +95,7 @@ namespace Hollywood.Observer
 				}
 				catch (Exception e)
 				{
-					Logger.LogError(e);
+					Logger?.LogError(e);
 				}
 			}
 
