@@ -148,7 +148,7 @@ PlayerSettings:
   androidMaxAspectRatio: 2.1
   applicationIdentifier:
     Android: com.JeanMeyblum.Hollywood
-    Standalone: com.DefaultCompany.Hollywood
+    Standalone: com.JeanMeyblum.Hollywood
   buildNumber:
     Standalone: 0
     iPhone: 0
@@ -676,7 +676,7 @@ PlayerSettings:
   webGLThreadsSupport: 0
   webGLDecompressionFallback: 0
   scriptingDefineSymbols:
-    1: HOLLYWOOD_UNITY_AUTO_SETUP;HOLLYWOOD_ASSERT;HOLLYWOOD_LOG
+    1: HOLLYWOOD_UNITY_AUTO_SETUP;HOLLYWOOD_ASSERT;HOLLYWOOD_LOG;HOLLYWOOD_UNITY_LOG_TRACE
     7: HOLLYWOOD_UNITY_AUTO_SETUP;HOLLYWOOD_LOG;HOLLYWOOD_ASSERT;HOLLYWOOD_UNITY_LOG_TRACE
   additionalCompilerArguments: {}
   platformArchitecture: {}

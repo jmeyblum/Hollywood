@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 namespace Hollywood.Unity
 {
@@ -82,12 +83,58 @@ namespace Hollywood.Unity
 			switch (playModeStateChange)
 			{
 				case UnityEditor.PlayModeStateChange.ExitingPlayMode:
-					Injector.Reset();
-					Injector.InjectionContext = null;
+					Injector.Dispose();
 					break;
 			}
 		}
 #endif
 
+		public static class Internal
+		{
+#if UNITY_EDITOR
+			private static bool TransitioningFromToPlayMode = false;
+
+			[UnityEditor.InitializeOnLoadMethod]
+			static void OnInitializeOnLoad()
+			{
+				UnityEditor.EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
+				UnityEditor.EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
+			}
+
+			private static void OnPlayModeStateChanged(UnityEditor.PlayModeStateChange playModeStateChange)
+			{
+				switch (playModeStateChange)
+				{
+					case UnityEditor.PlayModeStateChange.ExitingPlayMode:
+					case UnityEditor.PlayModeStateChange.ExitingEditMode:
+						TransitioningFromToPlayMode = true;
+						break;
+					default:
+						TransitioningFromToPlayMode = false;
+						break;
+				}
+			}
+#endif
+
+			public static void NotifyMonoBehaviourCreation(MonoBehaviour monoBehaviour)
+			{
+#if UNITY_EDITOR
+				if (!TransitioningFromToPlayMode)
+#endif
+				{
+					Injector.Advanced.NotifyItemCreation(monoBehaviour);
+				}
+			}
+
+			public static void NotifyMonoBehaviourDestruction(MonoBehaviour monoBehaviour)
+			{
+#if UNITY_EDITOR
+				if (!TransitioningFromToPlayMode)
+#endif
+				{
+					Injector.Advanced.NotifyItemDestruction(monoBehaviour);
+				}
+			}
+		}
 	}
 }

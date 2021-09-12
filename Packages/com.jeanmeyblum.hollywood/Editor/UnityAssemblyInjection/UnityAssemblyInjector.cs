@@ -11,11 +11,11 @@ namespace Hollywood.Editor.UnityAssemblyInjection
 	{
 		internal static readonly Type ObservedMonoBehaviourAttributeType = typeof(ObservedMonoBehaviourAttribute);
 
-		private static readonly System.Reflection.MethodInfo NotifyItemCreationMethod = typeof(Injector.Advanced).GetMethod(nameof(Injector.Advanced.NotifyItemCreation), StaticBindingFlags);
-		private static readonly System.Reflection.MethodInfo NotifyItemDestructionMethod = typeof(Injector.Advanced).GetMethod(nameof(Injector.Advanced.NotifyItemDestruction), StaticBindingFlags);
+		private static readonly System.Reflection.MethodInfo NotifyMonoBehaviourCreationMethod = typeof(Unity.Helper.Internal).GetMethod(nameof(Unity.Helper.Internal.NotifyMonoBehaviourCreation), StaticBindingFlags);
+		private static readonly System.Reflection.MethodInfo NotifyMonoBehaviourDestructionMethod = typeof(Unity.Helper.Internal).GetMethod(nameof(Unity.Helper.Internal.NotifyMonoBehaviourDestruction), StaticBindingFlags);
 
-		private MethodReference NotifyItemCreationMethodReference;
-		private MethodReference NotifyItemDestructionMethodReference;
+		private MethodReference NotifyMonoBehaviourCreationMethodReference;
+		private MethodReference NotifyMonoBehaviourDestructionMethodReference;
 
 		protected UnityAssemblyInjector(AssemblyDefinition assemblyDefinition)
 			: base(assemblyDefinition)
@@ -23,8 +23,8 @@ namespace Hollywood.Editor.UnityAssemblyInjection
 
 		protected override void Inject()
 		{
-			NotifyItemCreationMethodReference = AssemblyDefinition.MainModule.ImportReference(NotifyItemCreationMethod);
-			NotifyItemDestructionMethodReference = AssemblyDefinition.MainModule.ImportReference(NotifyItemDestructionMethod);
+			NotifyMonoBehaviourCreationMethodReference = AssemblyDefinition.MainModule.ImportReference(NotifyMonoBehaviourCreationMethod);
+			NotifyMonoBehaviourDestructionMethodReference = AssemblyDefinition.MainModule.ImportReference(NotifyMonoBehaviourDestructionMethod);
 
 			var injectionData = new UnityInjectionData(AssemblyDefinition.MainModule);
 
@@ -50,8 +50,8 @@ namespace Hollywood.Editor.UnityAssemblyInjection
 
 		private void Inject(InjectableMonoBehaviour injectableMonoBehaviour)
 		{
-			InjectMethodCallInMethod(injectableMonoBehaviour, "Awake", NotifyItemCreationMethodReference);
-			InjectMethodCallInMethod(injectableMonoBehaviour, "OnDestroy", NotifyItemDestructionMethodReference);
+			InjectMethodCallInMethod(injectableMonoBehaviour, "Awake", NotifyMonoBehaviourCreationMethodReference);
+			InjectMethodCallInMethod(injectableMonoBehaviour, "OnDestroy", NotifyMonoBehaviourDestructionMethodReference);
 		}
 
 		private void InjectMethodCallInMethod(InjectableMonoBehaviour injectableMonoBehaviour, string methodName, MethodReference methodReference)
