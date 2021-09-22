@@ -475,9 +475,9 @@ namespace Hollywood.Editor.AssemblyInjection
 				instructions.Add(Instruction.Create(OpCodes.Dup));
 				instructions.Add(CreatePushIntToStackInstruction(valueIndex));
 
-				if (arrayValue is TypeDefinition typeDefinition && typeDefinition.HasInterfaces)
+				if (arrayValue is TypeDefinition typeDefinition)
 				{
-					var interfaces = typeDefinition.Interfaces;
+					var interfaces = GetInterfaces(typeDefinition);
 
 					instructions.Add(CreatePushIntToStackInstruction(interfaces.Count + 1));
 					instructions.Add(Instruction.Create(OpCodes.Newarr, TypeType));
@@ -488,7 +488,7 @@ namespace Hollywood.Editor.AssemblyInjection
 
 					foreach (var @interface in interfaces)
 					{
-						AddTypeToArray(instructions, subValueIndex, @interface.InterfaceType);
+						AddTypeToArray(instructions, subValueIndex, @interface);
 
 						++subValueIndex;
 					}
@@ -506,6 +506,77 @@ namespace Hollywood.Editor.AssemblyInjection
 				++valueIndex;
 			}
 		}
+
+		private static IReadOnlyCollection<TypeReference> GetInterfaces(TypeDefinition typeDefinition)
+		{
+			HashSet<TypeReference> interfaces = new HashSet<TypeReference>(new TypeReferenceComprarer());
+			if (typeDefinition.HasInterfaces)
+			{
+				interfaces.UnionWith(typeDefinition.Interfaces.Select(t => t.InterfaceType));
+			}
+
+			var baseType = typeDefinition.BaseType;
+			while (baseType != null && baseType.Module == typeDefinition.Module)
+			{
+				var resolvedBaseType = baseType.Resolve();
+
+				if (resolvedBaseType != null && baseType is GenericInstanceType genericInstanceType && genericInstanceType.HasGenericArguments)
+				{
+					Dictionary<TypeReference, TypeReference> genericTypeToRealType = new Dictionary<TypeReference, TypeReference>(new TypeReferenceComprarer());
+
+					for (int i = 0; i < genericInstanceType.GenericArguments.Count; i++)
+					{
+						genericTypeToRealType[resolvedBaseType.GenericParameters[i]] = genericInstanceType.GenericArguments[i];
+					}
+
+					foreach (var typeInterface in resolvedBaseType.Interfaces)
+					{
+						if (typeInterface.InterfaceType is GenericInstanceType genericInterface && genericInterface.HasGenericArguments)
+						{
+							var resolvedInterface = new GenericInstanceType(genericInterface.ElementType);
+
+							Dictionary<int, TypeReference> realTypes = new Dictionary<int, TypeReference>();
+							int index = 0;
+							foreach (var genericType in genericInterface.GenericArguments)
+							{
+								resolvedInterface.GenericArguments.Add(genericType);
+
+								if (genericTypeToRealType.TryGetValue(genericType, out var realType))
+								{
+									realTypes[index] = realType;
+								}
+
+								++index;
+							}
+
+							foreach (var realType in realTypes)
+							{
+								resolvedInterface.GenericArguments.RemoveAt(realType.Key);
+								resolvedInterface.GenericArguments.Insert(realType.Key, realType.Value);
+							}
+
+							interfaces.Add(resolvedInterface);
+						}
+					}
+				}
+
+				if (resolvedBaseType != null)
+				{
+					foreach (var typeInterface in resolvedBaseType.Interfaces)
+					{
+						if (!typeInterface.InterfaceType.ContainsGenericParameter)
+						{
+							interfaces.Add(typeInterface.InterfaceType);
+						}
+					}
+				}
+
+				baseType = resolvedBaseType.BaseType;
+			}
+
+			return interfaces;
+		}
+
 
 		private void AddTypeToArray(Collection<Instruction> instructions, int subValueIndex, TypeReference interfaceTypeReference)
 		{
