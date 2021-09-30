@@ -520,6 +520,11 @@ namespace Hollywood.Editor.AssemblyInjection
 			{
 				var resolvedBaseType = baseType.Resolve();
 
+				if (resolvedBaseType.Module != typeDefinition.Module)
+				{
+					break;
+				}
+
 				if (resolvedBaseType != null && baseType is GenericInstanceType genericInstanceType && genericInstanceType.HasGenericArguments)
 				{
 					Dictionary<TypeReference, TypeReference> genericTypeToRealType = new Dictionary<TypeReference, TypeReference>(new TypeReferenceComprarer());

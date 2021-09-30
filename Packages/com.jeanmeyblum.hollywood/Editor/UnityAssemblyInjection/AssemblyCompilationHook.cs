@@ -76,7 +76,10 @@ namespace Hollywood.Editor.UnityAssemblyInjection
 		public static void Inject(string assemblyPath, bool ignoreAlreadyInjectedException = false)
 		{
 			var assemblyResolver = new DefaultAssemblyResolver();
-			foreach (var path in CompilationPipeline.GetPrecompiledAssemblyPaths(CompilationPipeline.PrecompiledAssemblySources.All).Select(p => Path.GetDirectoryName(p)).Distinct().Where(p => p != null))
+			foreach (var path in CompilationPipeline.GetPrecompiledAssemblyPaths(CompilationPipeline.PrecompiledAssemblySources.All)
+				.Select(p => Path.GetDirectoryName(p))
+				.Union(CompilationPipeline.GetAssemblies().Select(a => Path.GetFullPath(Path.GetDirectoryName(a.outputPath))))
+				.Where(p => p != null).Distinct())
 			{
 				assemblyResolver.AddSearchDirectory(path);
 			}
