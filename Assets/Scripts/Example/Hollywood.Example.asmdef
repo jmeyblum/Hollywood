@@ -1,0 +1,17 @@
+{
+    "name": "Hollywood.Example",
+    "rootNamespace": "",
+    "references": [
+        "GUID:c43b95b88c212a8499e9e59de5572223",
+        "GUID:a9ba89c4c7da5f5429e2e2f99a07e5d6"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

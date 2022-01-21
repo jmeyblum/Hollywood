@@ -1,0 +1,17 @@
+{
+    "name": "Hollywood.Unity",
+    "rootNamespace": "",
+    "references": [
+        "GUID:c43b95b88c212a8499e9e59de5572223",
+        "GUID:48e61be87318d47408d3def8273f88a1"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
